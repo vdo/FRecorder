@@ -34,13 +34,19 @@
  - <b>WAVE (WAV)</b>: Ideal for professional-grade recordings.
  - <b>3Gp</b>: Perfect for sharing on the go.
 
-<b>3. Customizable Settings:</b>
+<b>3. USB Audio Input</b>: Record from external USB microphones and audio interfaces. The app automatically detects connected USB audio devices and lets you select them as the recording source.
+
+<b>4. Gain Boost</b>: Adjustable input gain to amplify quiet audio sources. Applied in real-time during recording with clipping protection.
+
+<b>5. Live Monitoring</b>: Listen to what's being recorded in real-time through Bluetooth headphones or the built-in speaker. Works with external USB audio devices by intelligently routing playback to the correct output device. Toggle monitoring on/off during recording with the headset button.
+
+<b>6. Customizable Settings:</b>
  - Easy to adjust sample rate and bitrate to suit your needs.
  - Toggle between mono and stereo recording.
 
-<b>4. Visual Waveform</b>: See your recordings come to life with waveform display.
+<b>7. Visual Waveform</b>: See your recordings come to life with waveform display.
 
-<b>5. User-Friendly Features:</b>
+<b>8. User-Friendly Features:</b>
  - Rename recordings for easy organization.
  - Share your audio files effortlessly.
  - Import existing audio files.

@@ -308,7 +308,7 @@
 					android:layout_width="@dimen/bottom_pnl_btn_size"
 					android:layout_height="@dimen/bottom_pnl_btn_size"
 					android:layout_marginTop="@dimen/spacing_small"
-					android:layout_marginStart="-10dp"
+					android:layout_marginStart="-30dp"
 					android:adjustViewBounds="true"
 					android:background="?android:selectableItemBackgroundBorderless"
 					android:clickable="true"
