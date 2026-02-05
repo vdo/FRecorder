@@ -56,6 +56,8 @@ public class PrefsImpl implements Prefs {
 	private static final String PREF_KEY_SETTING_SAMPLE_RATE = "setting_sample_rate";
 	private static final String PREF_KEY_SETTING_NAMING_FORMAT = "setting_naming_format";
 	private static final String PREF_KEY_SETTING_CHANNEL_COUNT = "setting_channel_count";
+	private static final String PREF_KEY_SETTING_AUDIO_SOURCE = "setting_audio_source";
+	private static final String PREF_KEY_GAIN_BOOST_LEVEL = "gain_boost_level";
 
 	private final SharedPreferences sharedPreferences;
 
@@ -396,6 +398,30 @@ public class PrefsImpl implements Prefs {
 	}
 
 	@Override
+	public void setSettingAudioSource(int deviceId) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putInt(PREF_KEY_SETTING_AUDIO_SOURCE, deviceId);
+		editor.apply();
+	}
+
+	@Override
+	public int getSettingAudioSource() {
+		return sharedPreferences.getInt(PREF_KEY_SETTING_AUDIO_SOURCE, AppConstants.DEFAULT_AUDIO_SOURCE);
+	}
+
+	@Override
+	public void setGainBoostLevel(int level) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putInt(PREF_KEY_GAIN_BOOST_LEVEL, level);
+		editor.apply();
+	}
+
+	@Override
+	public int getGainBoostLevel() {
+		return sharedPreferences.getInt(PREF_KEY_GAIN_BOOST_LEVEL, AppConstants.DEFAULT_GAIN_BOOST_LEVEL);
+	}
+
+	@Override
 	public void resetSettings() {
 		SharedPreferences.Editor editor = sharedPreferences.edit();
 //		editor.putString(PREF_KEY_SETTING_THEME_COLOR, AppConstants.DEFAULT_THEME_COLOR);
@@ -404,6 +430,8 @@ public class PrefsImpl implements Prefs {
 		editor.putInt(PREF_KEY_SETTING_SAMPLE_RATE, AppConstants.DEFAULT_RECORD_SAMPLE_RATE);
 		editor.putInt(PREF_KEY_SETTING_BITRATE, AppConstants.DEFAULT_RECORD_ENCODING_BITRATE);
 		editor.putInt(PREF_KEY_SETTING_CHANNEL_COUNT, AppConstants.DEFAULT_CHANNEL_COUNT);
+		editor.putInt(PREF_KEY_SETTING_AUDIO_SOURCE, AppConstants.DEFAULT_AUDIO_SOURCE);
+		editor.putInt(PREF_KEY_GAIN_BOOST_LEVEL, AppConstants.DEFAULT_GAIN_BOOST_LEVEL);
 		editor.apply();
 	}
 }

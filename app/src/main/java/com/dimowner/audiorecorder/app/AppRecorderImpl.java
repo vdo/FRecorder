@@ -16,6 +16,8 @@
 
 package com.dimowner.audiorecorder.app;
 
+import android.media.AudioDeviceInfo;
+
 import com.dimowner.audiorecorder.ARApplication;
 import com.dimowner.audiorecorder.AppConstants;
 import com.dimowner.audiorecorder.BackgroundQueue;
@@ -228,9 +230,19 @@ public class AppRecorderImpl implements AppRecorder {
 
 	@Override
 	public void startRecording(String filePath, int channelCount, int sampleRate, int bitrate) {
+		startRecording(filePath, channelCount, sampleRate, bitrate, null, AppConstants.GAIN_BOOST_OFF);
+	}
+
+	@Override
+	public void startRecording(String filePath, int channelCount, int sampleRate, int bitrate, AudioDeviceInfo audioDevice) {
+		startRecording(filePath, channelCount, sampleRate, bitrate, audioDevice, AppConstants.GAIN_BOOST_OFF);
+	}
+
+	@Override
+	public void startRecording(String filePath, int channelCount, int sampleRate, int bitrate, AudioDeviceInfo audioDevice, int gainBoostLevel) {
 		if (!audioRecorder.isRecording()) {
 			recordFilePath = filePath;
-			audioRecorder.startRecording(filePath, channelCount, sampleRate, bitrate);
+			audioRecorder.startRecording(filePath, channelCount, sampleRate, bitrate, audioDevice, gainBoostLevel);
 		}
 	}
 

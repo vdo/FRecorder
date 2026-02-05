@@ -31,6 +31,7 @@ import com.dimowner.audiorecorder.app.setup.SetupContract;
 import com.dimowner.audiorecorder.app.setup.SetupPresenter;
 import com.dimowner.audiorecorder.app.trash.TrashContract;
 import com.dimowner.audiorecorder.app.trash.TrashPresenter;
+import com.dimowner.audiorecorder.audio.AudioDeviceManager;
 import com.dimowner.audiorecorder.audio.AudioWaveformVisualization;
 import com.dimowner.audiorecorder.audio.player.AudioPlayerNew;
 import com.dimowner.audiorecorder.audio.player.PlayerContractNew;
@@ -170,6 +171,10 @@ public class Injector {
 		}
 	}
 
+	public AudioDeviceManager provideAudioDeviceManager(Context context) {
+		return AudioDeviceManager.getInstance(context);
+	}
+
 	public RecordDataSource provideRecordDataSource(Context context) {
 		if (recordDataSource == null) {
 			recordDataSource = new RecordDataSource(
@@ -203,7 +208,7 @@ public class Injector {
 		if (settingsPresenter == null) {
 			settingsPresenter = new SettingsPresenter(provideLocalRepository(context), provideFileRepository(context),
 					provideRecordingTasksQueue(), provideLoadingTasksQueue(), providePrefs(context),
-					provideSettingsMapper(context), provideAppRecorder(context));
+					provideSettingsMapper(context), provideAppRecorder(context), provideAudioDeviceManager(context));
 		}
 		return settingsPresenter;
 	}

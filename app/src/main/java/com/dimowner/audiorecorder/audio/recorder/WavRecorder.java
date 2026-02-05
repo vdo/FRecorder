@@ -16,11 +16,13 @@
 
 package com.dimowner.audiorecorder.audio.recorder;
 
+import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Handler;
 import com.dimowner.audiorecorder.AppConstants;
+import com.dimowner.audiorecorder.audio.monitor.AudioMonitor;
 import com.dimowner.audiorecorder.exception.InvalidOutputFile;
 import com.dimowner.audiorecorder.exception.RecorderInitException;
 import com.dimowner.audiorecorder.exception.RecordingException;
@@ -60,6 +62,9 @@ public class WavRecorder implements RecorderContract.Recorder {
 	private int lastVal = 0;
 
 	private int sampleRate = AppConstants.RECORD_SAMPLE_RATE_44100;
+	private int gainBoostLevel = AppConstants.GAIN_BOOST_OFF;
+	private volatile boolean monitoringEnabled = false;
+	private final AudioMonitor audioMonitor = AudioMonitor.getInstance();
 
 	private RecorderContract.RecorderCallback recorderCallback;
 
@@ -85,7 +90,20 @@ public class WavRecorder implements RecorderContract.Recorder {
 	@Override
 	@RequiresPermission(value = "android.permission.RECORD_AUDIO")
 	public void startRecording(String outputFile, int channelCount, int sampleRate, int bitrate) {
+		startRecording(outputFile, channelCount, sampleRate, bitrate, null, AppConstants.GAIN_BOOST_OFF);
+	}
+
+	@Override
+	@RequiresPermission(value = "android.permission.RECORD_AUDIO")
+	public void startRecording(String outputFile, int channelCount, int sampleRate, int bitrate, AudioDeviceInfo audioDevice) {
+		startRecording(outputFile, channelCount, sampleRate, bitrate, audioDevice, AppConstants.GAIN_BOOST_OFF);
+	}
+
+	@Override
+	@RequiresPermission(value = "android.permission.RECORD_AUDIO")
+	public void startRecording(String outputFile, int channelCount, int sampleRate, int bitrate, AudioDeviceInfo audioDevice, int gainBoostLevel) {
 		this.sampleRate = sampleRate;
+		this.gainBoostLevel = gainBoostLevel;
 //		this.framesPerVisInterval = (int)((VISUALIZATION_INTERVAL/1000f)/(1f/sampleRate));
 		this.channelCount = channelCount;
 		recordFile = new File(outputFile);
@@ -107,6 +125,12 @@ public class WavRecorder implements RecorderContract.Recorder {
 						AudioFormat.ENCODING_PCM_16BIT,
 						bufferSize
 				);
+				// Set preferred audio device if specified (for USB audio devices)
+				if (audioDevice != null) {
+					boolean deviceSet = recorder.setPreferredDevice(audioDevice);
+					Timber.d("Set preferred audio device: %s, success: %b",
+							audioDevice.getProductName(), deviceSet);
+				}
 			} catch (IllegalArgumentException e) {
 				Timber.e(e, "sampleRate = " + sampleRate + " channel = " + channel + " bufferSize = " + bufferSize);
 				if (recorder != null) {
@@ -118,6 +142,12 @@ public class WavRecorder implements RecorderContract.Recorder {
 				updateTime = System.currentTimeMillis();
 				isRecording.set(true);
 				recordingThread = new Thread(this::writeAudioDataToFile, "AudioRecorder Thread");
+
+				// Start audio monitoring if enabled
+				if (monitoringEnabled) {
+					audioMonitor.initialize(sampleRate, channelCount);
+					audioMonitor.start();
+				}
 
 				recordingThread.start();
 				scheduleRecordingTimeUpdate();
@@ -145,6 +175,12 @@ public class WavRecorder implements RecorderContract.Recorder {
 				updateTime = System.currentTimeMillis();
 				scheduleRecordingTimeUpdate();
 				recorder.startRecording();
+
+				// Resume audio monitoring if enabled
+				if (monitoringEnabled && audioMonitor.isPaused()) {
+					audioMonitor.resume();
+				}
+
 				if (recorderCallback != null) {
 					recorderCallback.onResumeRecord();
 				}
@@ -173,6 +209,12 @@ public class WavRecorder implements RecorderContract.Recorder {
 			isRecording.set(false);
 			isPaused.set(false);
 			stopRecordingTimer();
+
+			// Stop audio monitoring
+			if (audioMonitor.isMonitoring()) {
+				audioMonitor.stop();
+			}
+
 			if (recorder.getState() == AudioRecord.STATE_INITIALIZED) {
 				try {
 					recorder.stop();
@@ -223,10 +265,31 @@ public class WavRecorder implements RecorderContract.Recorder {
 							//TODO: find a better way to covert bytes into shorts.
 							shortBuffer.put(data[i]);
 							shortBuffer.put(data[i+1]);
-							sum += Math.abs(shortBuffer.getShort(0));
+							short sample = shortBuffer.getShort(0);
+
+							// Apply gain boost if enabled
+							float multiplier = getGainMultiplier();
+							if (multiplier > 1.0f) {
+								int amplified = (int) (sample * multiplier);
+								// Clamp to prevent clipping
+								if (amplified > Short.MAX_VALUE) amplified = Short.MAX_VALUE;
+								if (amplified < Short.MIN_VALUE) amplified = Short.MIN_VALUE;
+								sample = (short) amplified;
+								// Write back the amplified sample
+								data[i] = (byte) (sample & 0xff);
+								data[i+1] = (byte) ((sample >> 8) & 0xff);
+							}
+
+							sum += Math.abs(sample);
 							shortBuffer.clear();
 						}
 						lastVal = (int)(sum/(bufferSize/16));
+
+						// Feed audio to monitor if enabled (after gain boost is applied)
+						if (monitoringEnabled && audioMonitor.isMonitoring()) {
+							audioMonitor.feedAudio(data.clone());
+						}
+
 						try {
 							fos.write(data);
 						} catch (IOException e) {
@@ -236,6 +299,11 @@ public class WavRecorder implements RecorderContract.Recorder {
 								stopRecording();
 							});
 						}
+					}
+				} else {
+					// Pause monitoring when recording is paused
+					if (monitoringEnabled && audioMonitor.isMonitoring() && !audioMonitor.isPaused()) {
+						audioMonitor.pause();
 					}
 				}
 			}
@@ -360,5 +428,35 @@ public class WavRecorder implements RecorderContract.Recorder {
 	private void pauseRecordingTimer() {
 		handler.removeCallbacksAndMessages(null);
 		updateTime = 0;
+	}
+
+	private float getGainMultiplier() {
+		switch (gainBoostLevel) {
+			case AppConstants.GAIN_BOOST_6DB:
+				return AppConstants.GAIN_BOOST_MULTIPLIER_6DB;
+			case AppConstants.GAIN_BOOST_12DB:
+				return AppConstants.GAIN_BOOST_MULTIPLIER_12DB;
+			default:
+				return 1.0f;
+		}
+	}
+
+	/**
+	 * Enable or disable audio monitoring.
+	 * When enabled, recorded audio is played back through headphones in real-time.
+	 * Should be called before startRecording().
+	 */
+	public void setMonitoringEnabled(boolean enabled) {
+		this.monitoringEnabled = enabled;
+		if (enabled && isRecording.get() && !isPaused.get() && !audioMonitor.isMonitoring()) {
+			audioMonitor.initialize(sampleRate, channelCount);
+			audioMonitor.start();
+		} else if (!enabled && audioMonitor.isMonitoring()) {
+			audioMonitor.stop();
+		}
+	}
+
+	public boolean isMonitoringEnabled() {
+		return monitoringEnabled;
 	}
 }

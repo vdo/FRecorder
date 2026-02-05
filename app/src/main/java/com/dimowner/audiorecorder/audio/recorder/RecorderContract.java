@@ -16,6 +16,8 @@
 
 package com.dimowner.audiorecorder.audio.recorder;
 
+import android.media.AudioDeviceInfo;
+
 import com.dimowner.audiorecorder.exception.AppException;
 
 import java.io.File;
@@ -34,6 +36,8 @@ public interface RecorderContract {
 	interface Recorder {
 		void setRecorderCallback(RecorderCallback callback);
 		void startRecording(String outputFile, int channelCount, int sampleRate, int bitrate);
+		void startRecording(String outputFile, int channelCount, int sampleRate, int bitrate, AudioDeviceInfo audioDevice);
+		void startRecording(String outputFile, int channelCount, int sampleRate, int bitrate, AudioDeviceInfo audioDevice, int gainBoostLevel);
 		void resumeRecording();
 		void pauseRecording();
 		void stopRecording();

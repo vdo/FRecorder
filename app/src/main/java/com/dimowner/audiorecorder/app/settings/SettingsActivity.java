@@ -21,6 +21,7 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioDeviceInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -29,6 +30,7 @@ import android.text.Html;
 import android.text.SpannableStringBuilder;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.LinearLayout;
@@ -45,6 +47,7 @@ import com.dimowner.audiorecorder.app.browser.FileBrowserActivity;
 import com.dimowner.audiorecorder.app.moverecords.MoveRecordsActivity;
 import com.dimowner.audiorecorder.app.trash.TrashActivity;
 import com.dimowner.audiorecorder.app.widget.SettingView;
+import com.dimowner.audiorecorder.audio.AudioDeviceManager;
 import com.dimowner.audiorecorder.util.AndroidUtils;
 import com.dimowner.audiorecorder.util.FileUtil;
 import com.dimowner.audiorecorder.util.RippleUtils;
@@ -76,12 +79,17 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 	private Switch swAskToRename;
 
 	private Spinner nameFormatSelector;
+	private Spinner audioSourceSelector;
 
 	private SettingView formatSetting;
 	private SettingView sampleRateSetting;
 	private SettingView bitrateSetting;
 	private SettingView channelsSetting;
+	private SettingView gainBoostSetting;
 	private Button btnReset;
+
+	private List<AudioDeviceInfo> availableAudioDevices = new ArrayList<>();
+	private boolean ignoreAudioSourceSelection = false;
 
 	private SettingsContract.UserActionsListener presenter;
 	private ColorMap colorMap;
@@ -212,6 +220,41 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 		channelsSetting.setOnChipCheckListener((key, name, checked) -> presenter.setSettingChannelCount(SettingsMapper.keyToChannelCount(key)));
 		channelsSetting.setTitle(R.string.channels);
 		channelsSetting.setOnInfoClickListener(v -> AndroidUtils.showInfoDialog(SettingsActivity.this, R.string.info_channels));
+
+		gainBoostSetting = findViewById(R.id.setting_gain_boost);
+		String[] gainBoostOptions = new String[] {
+				getString(R.string.gain_boost_off),
+				getString(R.string.gain_boost_6db),
+				getString(R.string.gain_boost_12db)
+		};
+		String[] gainBoostKeys = new String[] {
+				SettingsMapper.GAIN_BOOST_OFF_KEY,
+				SettingsMapper.GAIN_BOOST_6DB_KEY,
+				SettingsMapper.GAIN_BOOST_12DB_KEY
+		};
+		gainBoostSetting.setData(gainBoostOptions, gainBoostKeys);
+		gainBoostSetting.setOnChipCheckListener((key, name, checked) -> presenter.setGainBoostLevel(SettingsMapper.keyToGainBoostLevel(key)));
+		gainBoostSetting.setTitle(R.string.gain_boost);
+
+		audioSourceSelector = findViewById(R.id.audio_source_selector);
+		audioSourceSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+			@Override
+			public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+				if (ignoreAudioSourceSelection) {
+					return;
+				}
+				int deviceId;
+				if (position == 0) {
+					deviceId = AppConstants.AUDIO_SOURCE_DEFAULT_MIC;
+				} else {
+					deviceId = availableAudioDevices.get(position - 1).getId();
+				}
+				presenter.setSettingAudioSource(deviceId);
+			}
+
+			@Override
+			public void onNothingSelected(AdapterView<?> parent) { }
+		});
 
 		presenter = ARApplication.getInjector().provideSettingsPresenter(getApplicationContext());
 
@@ -431,6 +474,39 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 	}
 
 	@Override
+	public void showAudioSourceSetting(int selectedDeviceId, List<AudioDeviceInfo> devices) {
+		this.availableAudioDevices = devices;
+
+		// Build spinner items: "Default Microphone" + external devices
+		List<String> deviceNames = new ArrayList<>();
+		deviceNames.add(getString(R.string.audio_source_default_mic));
+
+		int selectedPosition = 0;
+		for (int i = 0; i < devices.size(); i++) {
+			AudioDeviceInfo device = devices.get(i);
+			deviceNames.add(AudioDeviceManager.getDeviceDisplayName(device) +
+					" (" + AudioDeviceManager.getDeviceTypeString(device) + ")");
+			if (device.getId() == selectedDeviceId) {
+				selectedPosition = i + 1;
+			}
+		}
+
+		ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+				android.R.layout.simple_spinner_item, deviceNames);
+		adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+		ignoreAudioSourceSelection = true;
+		audioSourceSelector.setAdapter(adapter);
+		audioSourceSelector.setSelection(selectedPosition);
+		ignoreAudioSourceSelection = false;
+	}
+
+	@Override
+	public void showGainBoostLevel(int level) {
+		gainBoostSetting.setSelected(SettingsMapper.gainBoostLevelToKey(level));
+	}
+
+	@Override
 	public void showAskToRenameAfterRecordingStop(boolean b) {
 		swAskToRename.setChecked(b);
 	}
@@ -579,6 +655,8 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 		sampleRateSetting.setEnabled(true);
 		bitrateSetting.setEnabled(true);
 		channelsSetting.setEnabled(true);
+		audioSourceSelector.setEnabled(true);
+		gainBoostSetting.setEnabled(true);
 	}
 
 	@Override
@@ -588,6 +666,8 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 		sampleRateSetting.setEnabled(false);
 		bitrateSetting.setEnabled(false);
 		channelsSetting.setEnabled(false);
+		audioSourceSelector.setEnabled(false);
+		gainBoostSetting.setEnabled(false);
 	}
 
 	@Override

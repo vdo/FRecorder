@@ -70,6 +70,10 @@ public class SettingsMapper {
 	public final static String CHANNEL_COUNT_STEREO = "stereo";
 	public final static String CHANNEL_COUNT_MONO = "mono";
 
+	public final static String GAIN_BOOST_OFF_KEY = "off";
+	public final static String GAIN_BOOST_6DB_KEY = "6db";
+	public final static String GAIN_BOOST_12DB_KEY = "12db";
+
 	private Resources resources;
 	private String[] formats;
 	private String[] formatsKeys;
@@ -294,6 +298,30 @@ public class SettingsMapper {
 			case AppConstants.RECORD_AUDIO_STEREO:
 			default:
 				return CHANNEL_COUNT_STEREO;
+		}
+	}
+
+	public static int keyToGainBoostLevel(String key) {
+		switch (key) {
+			case GAIN_BOOST_6DB_KEY:
+				return AppConstants.GAIN_BOOST_6DB;
+			case GAIN_BOOST_12DB_KEY:
+				return AppConstants.GAIN_BOOST_12DB;
+			case GAIN_BOOST_OFF_KEY:
+			default:
+				return AppConstants.GAIN_BOOST_OFF;
+		}
+	}
+
+	public static String gainBoostLevelToKey(int level) {
+		switch (level) {
+			case AppConstants.GAIN_BOOST_6DB:
+				return GAIN_BOOST_6DB_KEY;
+			case AppConstants.GAIN_BOOST_12DB:
+				return GAIN_BOOST_12DB_KEY;
+			case AppConstants.GAIN_BOOST_OFF:
+			default:
+				return GAIN_BOOST_OFF_KEY;
 		}
 	}
 

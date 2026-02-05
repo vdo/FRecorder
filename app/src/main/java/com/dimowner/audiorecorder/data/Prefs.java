@@ -72,5 +72,11 @@ public interface Prefs {
 	void setSettingChannelCount(int count);
 	int getSettingChannelCount();
 
+	void setSettingAudioSource(int deviceId);
+	int getSettingAudioSource();
+
+	void setGainBoostLevel(int level);
+	int getGainBoostLevel();
+
 	void resetSettings();
 }

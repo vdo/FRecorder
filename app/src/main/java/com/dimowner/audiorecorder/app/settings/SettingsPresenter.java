@@ -17,11 +17,13 @@
 package com.dimowner.audiorecorder.app.settings;
 
 import android.content.Context;
+import android.media.AudioDeviceInfo;
 
 import com.dimowner.audiorecorder.AppConstants;
 import com.dimowner.audiorecorder.BackgroundQueue;
 import com.dimowner.audiorecorder.app.AppRecorder;
 import com.dimowner.audiorecorder.app.AppRecorderCallback;
+import com.dimowner.audiorecorder.audio.AudioDeviceManager;
 import com.dimowner.audiorecorder.data.FileRepository;
 import com.dimowner.audiorecorder.data.Prefs;
 import com.dimowner.audiorecorder.data.database.LocalRepository;
@@ -50,11 +52,14 @@ public class SettingsPresenter implements SettingsContract.UserActionsListener {
 	private final Prefs prefs;
 	private final SettingsMapper settingsMapper;
 	private final AppRecorder appRecorder;
+	private final AudioDeviceManager audioDeviceManager;
 	private AppRecorderCallback appRecorderCallback;
+	private AudioDeviceManager.AudioDeviceListener deviceListener;
 
 	public SettingsPresenter(final LocalRepository localRepository, final FileRepository fileRepository,
 									 final BackgroundQueue recordingsTasks, final BackgroundQueue loadingTasks,
-									 final Prefs prefs,  final SettingsMapper settingsMapper,  final AppRecorder appRecorder) {
+									 final Prefs prefs, final SettingsMapper settingsMapper, final AppRecorder appRecorder,
+									 final AudioDeviceManager audioDeviceManager) {
 		this.localRepository = localRepository;
 		this.fileRepository = fileRepository;
 		this.recordingsTasks = recordingsTasks;
@@ -62,6 +67,7 @@ public class SettingsPresenter implements SettingsContract.UserActionsListener {
 		this.prefs = prefs;
 		this.settingsMapper = settingsMapper;
 		this.appRecorder = appRecorder;
+		this.audioDeviceManager = audioDeviceManager;
 
 		DecimalFormatSymbols formatSymbols = new DecimalFormatSymbols(Locale.getDefault());
 		formatSymbols.setDecimalSeparator('.');
@@ -121,6 +127,31 @@ public class SettingsPresenter implements SettingsContract.UserActionsListener {
 			view.showRecordingSampleRate(prefs.getSettingSampleRate());
 			//This is needed for scoped storage support
 			view.showDirectorySetting(prefs.isShowDirectorySetting());
+
+			// Load audio source setting
+			loadAudioSourceSetting();
+
+			// Load gain boost setting
+			view.showGainBoostLevel(prefs.getGainBoostLevel());
+		}
+	}
+
+	private void loadAudioSourceSetting() {
+		if (view != null && audioDeviceManager != null) {
+			List<AudioDeviceInfo> devices = audioDeviceManager.getAvailableInputDevices();
+			int selectedDevice = prefs.getSettingAudioSource();
+
+			// Verify selected device still exists
+			if (selectedDevice != AppConstants.AUDIO_SOURCE_DEFAULT_MIC) {
+				AudioDeviceInfo device = audioDeviceManager.getDeviceById(selectedDevice);
+				if (device == null) {
+					// Device no longer available, reset to default
+					selectedDevice = AppConstants.AUDIO_SOURCE_DEFAULT_MIC;
+					prefs.setSettingAudioSource(selectedDevice);
+				}
+			}
+
+			view.showAudioSourceSetting(selectedDevice, devices);
 		}
 	}
 
@@ -185,6 +216,21 @@ public class SettingsPresenter implements SettingsContract.UserActionsListener {
 	}
 
 	@Override
+	public void setSettingAudioSource(int deviceId) {
+		prefs.setSettingAudioSource(deviceId);
+	}
+
+	@Override
+	public void setGainBoostLevel(int level) {
+		prefs.setGainBoostLevel(level);
+	}
+
+	@Override
+	public void refreshAudioDevices() {
+		loadAudioSourceSetting();
+	}
+
+	@Override
 	public void deleteAllRecords() {
 		recordingsTasks.postRunnable(() -> {
 //				List<Record> records  = localRepository.getAllRecords();
@@ -233,6 +279,12 @@ public class SettingsPresenter implements SettingsContract.UserActionsListener {
 		} else {
 			view.enableAudioSettings();
 		}
+
+		// Register device listener for USB device connect/disconnect
+		if (audioDeviceManager != null) {
+			deviceListener = devices -> AndroidUtils.runOnUIThread(this::loadAudioSourceSetting);
+			audioDeviceManager.registerDeviceListener(deviceListener);
+		}
 	}
 
 	@Override
@@ -240,6 +292,10 @@ public class SettingsPresenter implements SettingsContract.UserActionsListener {
 		if (view != null) {
 			this.view = null;
 			appRecorder.removeRecordingCallback(appRecorderCallback);
+			if (audioDeviceManager != null && deviceListener != null) {
+				audioDeviceManager.unregisterDeviceListener(deviceListener);
+				deviceListener = null;
+			}
 		}
 	}
 

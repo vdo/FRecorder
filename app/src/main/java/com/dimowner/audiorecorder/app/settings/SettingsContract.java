@@ -17,10 +17,12 @@
 package com.dimowner.audiorecorder.app.settings;
 
 import android.content.Context;
+import android.media.AudioDeviceInfo;
 
 import com.dimowner.audiorecorder.Contract;
 
 import java.io.File;
+import java.util.List;
 
 public class SettingsContract {
 
@@ -45,6 +47,10 @@ public class SettingsContract {
 		void showNamingFormat(String namingKey);
 
 		void showChannelCount(int count);
+
+		void showAudioSourceSetting(int selectedDeviceId, List<AudioDeviceInfo> devices);
+
+		void showGainBoostLevel(int level);
 
 		void showAllRecordsDeleted();
 
@@ -95,6 +101,12 @@ public class SettingsContract {
 		void setSettingNamingFormat(String namingKey);
 
 		void setSettingRecordingFormat(String formatKey);
+
+		void setSettingAudioSource(int deviceId);
+
+		void setGainBoostLevel(int level);
+
+		void refreshAudioDevices();
 
 		void deleteAllRecords();
 

@@ -27,6 +27,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.graphics.Color;
+import android.media.AudioDeviceInfo;
 import android.media.RingtoneManager;
 import android.os.Build;
 import android.os.IBinder;
@@ -44,6 +45,7 @@ import com.dimowner.audiorecorder.BackgroundQueue;
 import com.dimowner.audiorecorder.ColorMap;
 import com.dimowner.audiorecorder.R;
 import com.dimowner.audiorecorder.app.main.MainActivity;
+import com.dimowner.audiorecorder.audio.AudioDeviceManager;
 import com.dimowner.audiorecorder.audio.player.PlayerContractNew;
 import com.dimowner.audiorecorder.audio.recorder.RecorderContract;
 import com.dimowner.audiorecorder.data.FileRepository;
@@ -96,6 +98,7 @@ public class RecordingService extends Service {
 	private ColorMap colorMap;
 	private boolean started = false;
 	private FileRepository fileRepository;
+	private AudioDeviceManager audioDeviceManager;
 
 	public RecordingService() {
 	}
@@ -118,6 +121,7 @@ public class RecordingService extends Service {
 
 		colorMap = ARApplication.getInjector().provideColorMap(getApplicationContext());
 		fileRepository = ARApplication.getInjector().provideFileRepository(getApplicationContext());
+		audioDeviceManager = ARApplication.getInjector().provideAudioDeviceManager(getApplicationContext());
 
 		appRecorderCallback = new AppRecorderCallback() {
 			boolean checkHasSpace = true;
@@ -425,6 +429,21 @@ public class RecordingService extends Service {
 					if (audioPlayer.isPlaying() || audioPlayer.isPaused()) {
 						audioPlayer.stop();
 					}
+
+					// Get selected audio device
+					int selectedDeviceId = prefs.getSettingAudioSource();
+					AudioDeviceInfo audioDevice = null;
+					if (selectedDeviceId != AppConstants.AUDIO_SOURCE_DEFAULT_MIC && audioDeviceManager != null) {
+						audioDevice = audioDeviceManager.getDeviceById(selectedDeviceId);
+						if (audioDevice == null) {
+							// Device no longer available, reset to default
+							prefs.setSettingAudioSource(AppConstants.AUDIO_SOURCE_DEFAULT_MIC);
+							Timber.w("Selected audio device not available, using default microphone");
+						}
+					}
+
+					final AudioDeviceInfo finalAudioDevice = audioDevice;
+					final int gainBoostLevel = prefs.getGainBoostLevel();
 					recordingsTasks.postRunnable(() -> {
 						try {
 							Record record = localRepository.insertEmptyFile(path);
@@ -434,7 +453,9 @@ public class RecordingService extends Service {
 									path,
 									prefs.getSettingChannelCount(),
 									prefs.getSettingSampleRate(),
-									prefs.getSettingBitrate()
+									prefs.getSettingBitrate(),
+									finalAudioDevice,
+									gainBoostLevel
 							));
 						} catch (IOException | OutOfMemoryError | IllegalStateException | NullPointerException e) {
 							Timber.e(e);

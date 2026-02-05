@@ -19,7 +19,8 @@
 		xmlns:tools="http://schemas.android.com/tools"
 		tools:viewBindingIgnore="true"
 		android:layout_width="match_parent"
-		android:layout_height="match_parent">
+		android:layout_height="match_parent"
+		android:fitsSystemWindows="true">
 	<LinearLayout
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
@@ -321,6 +322,38 @@
 				android:layout_height="wrap_content" />
 		<com.dimowner.audiorecorder.app.widget.SettingView
 				android:id="@+id/setting_channels"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content" />
+
+		<LinearLayout
+				android:id="@+id/panelAudioSource"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="vertical"
+				android:layout_marginTop="@dimen/spacing_small">
+
+			<TextView
+					style="@style/Text.NormalLabel"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:text="@string/audio_source"
+					android:drawableStart="@drawable/ic_audiotrack"
+					android:layout_marginStart="@dimen/spacing_normal"
+					android:layout_marginEnd="@dimen/spacing_normal"
+					android:drawablePadding="@dimen/spacing_normal"/>
+
+			<Spinner
+					android:id="@+id/audio_source_selector"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginBottom="@dimen/spacing_small"
+					android:paddingStart="0dp"
+					android:paddingEnd="1dp"/>
+
+		</LinearLayout>
+
+		<com.dimowner.audiorecorder.app.widget.SettingView
+				android:id="@+id/setting_gain_boost"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content" />
 

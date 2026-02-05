@@ -16,6 +16,8 @@
 
 package com.dimowner.audiorecorder.app;
 
+import android.media.AudioDeviceInfo;
+
 import com.dimowner.audiorecorder.IntArrayList;
 import com.dimowner.audiorecorder.audio.recorder.RecorderContract;
 
@@ -27,6 +29,8 @@ public interface AppRecorder {
 	void removeRecordingCallback(AppRecorderCallback recorderCallback);
 	void setRecorder(RecorderContract.Recorder recorder);
 	void startRecording(String filePath, int channelCount, int sampleRate, int bitrate);
+	void startRecording(String filePath, int channelCount, int sampleRate, int bitrate, AudioDeviceInfo audioDevice);
+	void startRecording(String filePath, int channelCount, int sampleRate, int bitrate, AudioDeviceInfo audioDevice, int gainBoostLevel);
 	void pauseRecording();
 	void resumeRecording();
 	void stopRecording();

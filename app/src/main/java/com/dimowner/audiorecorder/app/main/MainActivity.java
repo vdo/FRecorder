@@ -59,6 +59,9 @@ import com.dimowner.audiorecorder.app.welcome.WelcomeActivity;
 import com.dimowner.audiorecorder.app.widget.RecordingWaveformView;
 import com.dimowner.audiorecorder.app.widget.WaveformViewNew;
 import com.dimowner.audiorecorder.audio.AudioDecoder;
+import com.dimowner.audiorecorder.audio.monitor.AudioMonitor;
+import com.dimowner.audiorecorder.audio.recorder.RecorderContract;
+import com.dimowner.audiorecorder.audio.recorder.WavRecorder;
 import com.dimowner.audiorecorder.data.FileRepository;
 import com.dimowner.audiorecorder.data.database.Record;
 import com.dimowner.audiorecorder.exception.CantCreateFileException;
@@ -104,6 +107,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	private Button btnRecordingStop;
 	private ImageButton btnShare;
 	private ImageButton btnImport;
+	private ImageButton btnMonitor;
+	private boolean isMonitoringActive = false;
 	private ProgressBar progressBar;
 	private SeekBar playProgress;
 	private LinearLayout pnlImportProgress;
@@ -176,6 +181,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		ImageButton btnSettings = findViewById(R.id.btn_settings);
 		btnShare = findViewById(R.id.btn_share);
 		btnImport = findViewById(R.id.btn_import);
+		btnMonitor = findViewById(R.id.btn_monitor);
 		progressBar = findViewById(R.id.progress);
 		playProgress = findViewById(R.id.play_progress);
 		pnlImportProgress = findViewById(R.id.pnl_import_progress);
@@ -197,6 +203,12 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnShare.setOnClickListener(this);
 		btnImport.setOnClickListener(this);
 		txtName.setOnClickListener(this);
+		btnMonitor.setOnClickListener(this);
+		btnMonitor.setOnLongClickListener(v -> {
+			String result = AudioMonitor.getInstance().playTestTone();
+			Toast.makeText(this, "Test tone: " + result, Toast.LENGTH_LONG).show();
+			return true;
+		});
 		space = getResources().getDimension(R.dimen.spacing_xnormal);
 
 		playProgress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -333,6 +345,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			}
 		} else if (id == R.id.txt_name) {
 			presenter.onRenameRecordClick();
+		} else if (id == R.id.btn_monitor) {
+			toggleMonitoring();
 		}
 	}
 
@@ -347,6 +361,34 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		} catch (ActivityNotFoundException e) {
 			Timber.e(e);
 			showError(R.string.cant_import_files);
+		}
+	}
+
+	private void toggleMonitoring() {
+		RecorderContract.Recorder recorder = ARApplication.getInjector().provideAudioRecorder(getApplicationContext());
+		if (!(recorder instanceof WavRecorder)) {
+			Toast.makeText(this, R.string.monitoring_wav_only, Toast.LENGTH_SHORT).show();
+			return;
+		}
+		WavRecorder wavRecorder = (WavRecorder) recorder;
+		isMonitoringActive = !isMonitoringActive;
+		AudioMonitor.getInstance().setContext(getApplicationContext());
+		wavRecorder.setMonitoringEnabled(isMonitoringActive);
+		btnMonitor.setAlpha(isMonitoringActive ? 1.0f : 0.5f);
+
+		if (isMonitoringActive) {
+			// Show debug status after a short delay so AudioMonitor has time to start
+			btnMonitor.postDelayed(() -> {
+				String status = AudioMonitor.getInstance().getDebugStatus();
+				Toast.makeText(this, "Monitor ON\n" + status, Toast.LENGTH_LONG).show();
+			}, 300);
+			// Show again after 2s to see if feeds/writes are incrementing
+			btnMonitor.postDelayed(() -> {
+				String status = AudioMonitor.getInstance().getDebugStatus();
+				Toast.makeText(this, "2s: " + status, Toast.LENGTH_LONG).show();
+			}, 2500);
+		} else {
+			Toast.makeText(this, R.string.monitoring_off, Toast.LENGTH_SHORT).show();
 		}
 	}
 
@@ -438,6 +480,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		recordingWaveformView.setVisibility(View.GONE);
 		recordingWaveformView.reset();
 		txtProgress.setText(TimeUtils.formatTimeIntervalHourMinSec2(0));
+		isMonitoringActive = false;
+		btnMonitor.setAlpha(0.5f);
 	}
 
 	@Override

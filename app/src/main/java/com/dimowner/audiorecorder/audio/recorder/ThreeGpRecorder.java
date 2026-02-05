@@ -16,10 +16,12 @@
 
 package com.dimowner.audiorecorder.audio.recorder;
 
+import android.media.AudioDeviceInfo;
 import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Handler;
 
+import com.dimowner.audiorecorder.AppConstants;
 import com.dimowner.audiorecorder.exception.InvalidOutputFile;
 import com.dimowner.audiorecorder.exception.RecorderInitException;
 
@@ -65,10 +67,27 @@ public class ThreeGpRecorder implements RecorderContract.Recorder {
 
 	@Override
 	public void startRecording(String outputFile, int channelCount, int sampleRate, int bitrate) {
+		startRecording(outputFile, channelCount, sampleRate, bitrate, null, AppConstants.GAIN_BOOST_OFF);
+	}
+
+	@Override
+	public void startRecording(String outputFile, int channelCount, int sampleRate, int bitrate, AudioDeviceInfo audioDevice) {
+		startRecording(outputFile, channelCount, sampleRate, bitrate, audioDevice, AppConstants.GAIN_BOOST_OFF);
+	}
+
+	@Override
+	public void startRecording(String outputFile, int channelCount, int sampleRate, int bitrate, AudioDeviceInfo audioDevice, int gainBoostLevel) {
+		// Note: Gain boost is not supported for 3GP format (MediaRecorder doesn't expose raw audio samples)
 		recordFile = new File(outputFile);
 		if (recordFile.exists() && recordFile.isFile()) {
 			recorder = new MediaRecorder();
 			recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+			// Set preferred audio device if specified (for USB audio devices)
+			if (audioDevice != null) {
+				boolean deviceSet = recorder.setPreferredDevice(audioDevice);
+				Timber.d("Set preferred audio device: %s, success: %b",
+						audioDevice.getProductName(), deviceSet);
+			}
 			recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
 			if (sampleRate > 8000) {
 				recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB); //AMR_WR records with 16000 Hz frequency, ~23 kbps bitrate

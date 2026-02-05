@@ -138,6 +138,18 @@ public class AppConstants {
 //	public final static int RECORD_AUDIO_CHANNELS_COUNT = 2;
 	public final static int RECORD_AUDIO_MONO = 1;
 	public final static int RECORD_AUDIO_STEREO = 2;
+
+	// Audio input source constants
+	public static final int AUDIO_SOURCE_DEFAULT_MIC = -1;
+	public static final int DEFAULT_AUDIO_SOURCE = AUDIO_SOURCE_DEFAULT_MIC;
+
+	// Audio gain boost level constants
+	public static final int GAIN_BOOST_OFF = 0;
+	public static final int GAIN_BOOST_6DB = 1;
+	public static final int GAIN_BOOST_12DB = 2;
+	public static final float GAIN_BOOST_MULTIPLIER_6DB = 2.0f;   // 10^(6/20) ≈ 1.995
+	public static final float GAIN_BOOST_MULTIPLIER_12DB = 4.0f;  // 10^(12/20) ≈ 3.981
+	public static final int DEFAULT_GAIN_BOOST_LEVEL = GAIN_BOOST_OFF;
 	public final static int RECORD_MAX_DURATION = 14400000; // 240 min 4 hours
 
 	public static final String DEFAULT_THEME_COLOR = THEME_BLUE_GREY;
