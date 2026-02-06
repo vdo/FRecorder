@@ -708,8 +708,9 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		recordingWaveformView.setVisibility(View.GONE);
 		recordingWaveformView.reset();
 		txtProgress.setText(TimeUtils.formatTimeIntervalHourMinSec2(0));
-		isMonitoringActive = false;
-		btnMonitor.setAlpha(0.5f);
+		// Sync monitor button with actual state — monitoring may still be running as standalone
+		isMonitoringActive = AudioMonitor.getInstance().isMonitoring();
+		btnMonitor.setAlpha(isMonitoringActive ? 1.0f : 0.5f);
 	}
 
 	@Override

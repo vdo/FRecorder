@@ -191,13 +191,21 @@ public class WavRecorder implements RecorderContract.Recorder {
 	public void resumeRecording() {
 		if (recorder != null && recorder.getState() == AudioRecord.STATE_INITIALIZED) {
 			if (isPaused.get()) {
+				// Stop standalone monitoring before recording resumes (releases AudioRecord)
+				if (audioMonitor.isStandalone()) {
+					audioMonitor.stopStandalone();
+				}
+
 				updateTime = System.currentTimeMillis();
 				scheduleRecordingTimeUpdate();
 				recorder.startRecording();
 
-				// Resume audio monitoring if enabled
-				if (monitoringEnabled && audioMonitor.isPaused()) {
-					audioMonitor.resume();
+				// Restart recording-fed monitoring
+				if (monitoringEnabled) {
+					if (!audioMonitor.isMonitoring()) {
+						audioMonitor.initialize(sampleRate, channelCount);
+						audioMonitor.start();
+					}
 				}
 
 				if (recorderCallback != null) {
@@ -215,6 +223,12 @@ public class WavRecorder implements RecorderContract.Recorder {
 			durationMills += System.currentTimeMillis() - updateTime;
 			pauseRecordingTimer();
 
+			// Switch monitoring to standalone so user keeps hearing audio while paused
+			if (monitoringEnabled && audioMonitor.isMonitoring()) {
+				audioMonitor.stop();
+				audioMonitor.startStandalone(sampleRate, channelCount, null);
+			}
+
 			isPaused.set(true);
 			if (recorderCallback != null) {
 				recorderCallback.onPauseRecord();
@@ -229,11 +243,10 @@ public class WavRecorder implements RecorderContract.Recorder {
 			isPaused.set(false);
 			stopRecordingTimer();
 
-			// Stop recording-fed monitoring and release audio device
-			if (audioMonitor.isMonitoring()) {
+			// Stop recording-fed monitoring; will restart as standalone after recording thread finishes
+			if (audioMonitor.isMonitoring() && !audioMonitor.isStandalone()) {
 				audioMonitor.stop();
 			}
-			monitoringEnabled = false;
 
 			if (recorder.getState() == AudioRecord.STATE_INITIALIZED) {
 				try {
@@ -250,6 +263,11 @@ public class WavRecorder implements RecorderContract.Recorder {
 			try {
 				recordingThread.join(5000);
 			} catch (InterruptedException ignored) {}
+
+			// Restart monitoring as standalone now that AudioRecord is released
+			if (monitoringEnabled && !audioMonitor.isMonitoring()) {
+				audioMonitor.startStandalone(sampleRate, channelCount, null);
+			}
 
 			// Apply noise reduction if enabled (synchronous, file is now complete)
 			if (noiseReductionEnabled && recordFile != null && recordFile.exists()) {
@@ -381,10 +399,8 @@ public class WavRecorder implements RecorderContract.Recorder {
 						}
 					}
 				} else {
-					// Pause monitoring when recording is paused
-					if (monitoringEnabled && audioMonitor.isMonitoring() && !audioMonitor.isPaused()) {
-						audioMonitor.pause();
-					}
+							// Monitoring during pause is handled by standalone mode
+					// (started in pauseRecording), nothing to do here
 				}
 			}
 
@@ -492,7 +508,9 @@ public class WavRecorder implements RecorderContract.Recorder {
 		handler.postDelayed(() -> {
 			if (recorderCallback != null && recorder != null) {
 				long curTime = System.currentTimeMillis();
-				durationMills += curTime - updateTime;
+				if (updateTime > 0) {
+					durationMills += curTime - updateTime;
+				}
 				updateTime = curTime;
 				recorderCallback.onRecordProgress(durationMills, lastVal);
 				scheduleRecordingTimeUpdate();

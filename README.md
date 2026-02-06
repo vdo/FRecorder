@@ -4,15 +4,15 @@
 
 # FRecorder
 
-**FRecorder** is a fast, no-nonsense field audio recorder for Android — built for real-world production use. Whether you're on a film set capturing location sound through a USB audio interface, recording interviews, or just need a reliable pocket recorder, FRecorder gets out of your way and lets you hit record.
+**FRecorder** is a fast, no-nonsense field audio recorder for Android — built for real-world use. Whether you're on a film set capturing location sound through a USB audio interface, recording interviews, or just need a reliable pocket recorder, FRecorder gets out of your way and lets you hit record.
 
-Fork of [Dimowner/AudioRecorder](https://github.com/Dimowner/AudioRecorder) with significant additions for professional field recording workflows.
+Fork of [Dimowner/AudioRecorder](https://github.com/Dimowner/AudioRecorder) with significant additions for casual field recording workflows.
 
-![FRecorder screenshot](shot.png)
+<img src="shot.jpg" width="300" alt="FRecorder screenshot"/>
 
 ## Features
 
-- **USB Audio Input** — Record from external USB microphones, audio interfaces, and other USB audio devices. Automatically detects connected devices and lets you select them as the recording source.
+- **USB Audio Input** — Record from external USB microphones, audio interfaces, and other USB audio devices. Automatically detects connected devices and lets you select them as the recording source. Use a TRS-to-USB-C adapter like the BOYA BY-K4 to plug in contact mics, lavaliers, or any standard 3.5mm audio source.
 - **Live Monitoring** — Listen to what's being recorded in real-time through Bluetooth headphones or the built-in speaker. Toggle on/off before or during recording.
 - **Gain Boost** — Adjustable input gain (+6 dB / +12 dB) to amplify quiet sources. Applied in real-time with clipping protection.
 - **Noise Reduction** — Optional spectral noise reduction applied on save (WAV only).

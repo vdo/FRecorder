@@ -401,7 +401,9 @@ public class AppRecorderImpl implements AppRecorder {
 					Timber.e(e);
 				}
 				long curTime = System.currentTimeMillis();
-				durationMills += curTime - updateTime;
+				if (updateTime > 0) {
+					durationMills += curTime - updateTime;
+				}
 				updateTime = curTime;
 			}
 		}, 0, PLAYBACK_VISUALIZATION_INTERVAL);
@@ -418,14 +420,18 @@ public class AppRecorderImpl implements AppRecorder {
 	}
 
 	private void stopRecordingTimer() {
-		timerProgress.cancel();
-		timerProgress.purge();
+		if (timerProgress != null) {
+			timerProgress.cancel();
+			timerProgress.purge();
+		}
 		updateTime = 0;
 	}
 
 	private void pauseRecordingTimer() {
-		timerProgress.cancel();
-		timerProgress.purge();
+		if (timerProgress != null) {
+			timerProgress.cancel();
+			timerProgress.purge();
+		}
 		updateTime = 0;
 	}
 }
