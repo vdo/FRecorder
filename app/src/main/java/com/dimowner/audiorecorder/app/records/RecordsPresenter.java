@@ -23,6 +23,7 @@ import com.dimowner.audiorecorder.R;
 import com.dimowner.audiorecorder.app.AppRecorder;
 import com.dimowner.audiorecorder.app.AppRecorderCallback;
 import com.dimowner.audiorecorder.app.info.RecordInfo;
+import com.dimowner.audiorecorder.audio.monitor.AudioMonitor;
 import com.dimowner.audiorecorder.audio.player.PlayerContractNew;
 import com.dimowner.audiorecorder.data.FileRepository;
 import com.dimowner.audiorecorder.data.Prefs;
@@ -100,6 +101,13 @@ public class RecordsPresenter implements RecordsContract.UserActionsListener {
 
 				@Override
 				public void onStartPlay() {
+					// Stop monitor completely to free audio device for playback
+					AudioMonitor monitor = AudioMonitor.getInstance();
+					if (monitor.isStandalone()) {
+						monitor.stopStandalone();
+					} else if (monitor.isMonitoring()) {
+						monitor.stop();
+					}
 					if (view != null) {
 						view.startPlaybackService();
 						view.showPlayStart();

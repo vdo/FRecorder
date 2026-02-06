@@ -52,6 +52,8 @@ public class SettingsContract {
 
 		void showGainBoostLevel(int level);
 
+		void showNoiseReductionEnabled(boolean enabled);
+
 		void showAllRecordsDeleted();
 
 		void showFailDeleteAllRecords();
@@ -105,6 +107,8 @@ public class SettingsContract {
 		void setSettingAudioSource(int deviceId);
 
 		void setGainBoostLevel(int level);
+
+		void setNoiseReductionEnabled(boolean enabled);
 
 		void refreshAudioDevices();
 

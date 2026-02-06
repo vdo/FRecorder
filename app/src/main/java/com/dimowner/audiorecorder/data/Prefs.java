@@ -78,5 +78,8 @@ public interface Prefs {
 	void setGainBoostLevel(int level);
 	int getGainBoostLevel();
 
+	void setNoiseReductionEnabled(boolean enabled);
+	boolean isNoiseReductionEnabled();
+
 	void resetSettings();
 }

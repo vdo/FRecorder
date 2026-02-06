@@ -77,6 +77,7 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 	private Switch swPublicDir;
 	private Switch swKeepScreenOn;
 	private Switch swAskToRename;
+	private Switch swNoiseReduction;
 
 	private Spinner nameFormatSelector;
 	private Spinner audioSourceSelector;
@@ -235,6 +236,9 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 		gainBoostSetting.setData(gainBoostOptions, gainBoostKeys);
 		gainBoostSetting.setOnChipCheckListener((key, name, checked) -> presenter.setGainBoostLevel(SettingsMapper.keyToGainBoostLevel(key)));
 		gainBoostSetting.setTitle(R.string.gain_boost);
+
+		swNoiseReduction = findViewById(R.id.swNoiseReduction);
+		swNoiseReduction.setOnCheckedChangeListener((btn, isChecked) -> presenter.setNoiseReductionEnabled(isChecked));
 
 		audioSourceSelector = findViewById(R.id.audio_source_selector);
 		audioSourceSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -504,6 +508,11 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 	@Override
 	public void showGainBoostLevel(int level) {
 		gainBoostSetting.setSelected(SettingsMapper.gainBoostLevelToKey(level));
+	}
+
+	@Override
+	public void showNoiseReductionEnabled(boolean enabled) {
+		swNoiseReduction.setChecked(enabled);
 	}
 
 	@Override

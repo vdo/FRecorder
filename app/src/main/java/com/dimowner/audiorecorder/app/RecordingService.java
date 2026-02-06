@@ -28,6 +28,7 @@ import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.graphics.Color;
 import android.media.AudioDeviceInfo;
+import com.dimowner.audiorecorder.audio.recorder.WavRecorder;
 import android.media.RingtoneManager;
 import android.os.Build;
 import android.os.IBinder;
@@ -444,6 +445,11 @@ public class RecordingService extends Service {
 
 					final AudioDeviceInfo finalAudioDevice = audioDevice;
 					final int gainBoostLevel = prefs.getGainBoostLevel();
+
+					// Set noise reduction preference on WavRecorder
+					if (recorder instanceof WavRecorder) {
+						((WavRecorder) recorder).setNoiseReductionEnabled(prefs.isNoiseReductionEnabled());
+					}
 					recordingsTasks.postRunnable(() -> {
 						try {
 							Record record = localRepository.insertEmptyFile(path);

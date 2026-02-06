@@ -150,6 +150,13 @@ public class AppConstants {
 	public static final float GAIN_BOOST_MULTIPLIER_6DB = 2.0f;   // 10^(6/20) ≈ 1.995
 	public static final float GAIN_BOOST_MULTIPLIER_12DB = 4.0f;  // 10^(12/20) ≈ 3.981
 	public static final int DEFAULT_GAIN_BOOST_LEVEL = GAIN_BOOST_OFF;
+
+	// Noise reduction constants (disabled by default)
+	public static final boolean DEFAULT_NOISE_REDUCTION_ENABLED = false;
+	public static final float DEFAULT_NOISE_REDUCTION_DB = 12.0f;
+	public static final float DEFAULT_NOISE_REDUCTION_SENSITIVITY = 12.0f;
+	public static final int DEFAULT_NOISE_REDUCTION_FREQ_SMOOTHING = 3;
+	public static final float DEFAULT_NOISE_PROFILE_SECONDS = 1.0f;
 	public final static int RECORD_MAX_DURATION = 14400000; // 240 min 4 hours
 
 	public static final String DEFAULT_THEME_COLOR = THEME_BLUE_GREY;

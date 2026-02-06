@@ -133,6 +133,9 @@ public class SettingsPresenter implements SettingsContract.UserActionsListener {
 
 			// Load gain boost setting
 			view.showGainBoostLevel(prefs.getGainBoostLevel());
+
+			// Load noise reduction setting
+			view.showNoiseReductionEnabled(prefs.isNoiseReductionEnabled());
 		}
 	}
 
@@ -223,6 +226,11 @@ public class SettingsPresenter implements SettingsContract.UserActionsListener {
 	@Override
 	public void setGainBoostLevel(int level) {
 		prefs.setGainBoostLevel(level);
+	}
+
+	@Override
+	public void setNoiseReductionEnabled(boolean enabled) {
+		prefs.setNoiseReductionEnabled(enabled);
 	}
 
 	@Override

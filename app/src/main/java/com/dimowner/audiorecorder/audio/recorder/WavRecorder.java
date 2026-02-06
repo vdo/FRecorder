@@ -38,6 +38,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import timber.log.Timber;
 import static com.dimowner.audiorecorder.AppConstants.RECORDING_VISUALIZATION_INTERVAL;
 import androidx.annotation.RequiresPermission;
+import com.dimowner.audiorecorder.audio.noise.NoiseReducer;
+import com.dimowner.audiorecorder.util.AndroidUtils;
 
 public class WavRecorder implements RecorderContract.Recorder {
 
@@ -64,7 +66,9 @@ public class WavRecorder implements RecorderContract.Recorder {
 	private int sampleRate = AppConstants.RECORD_SAMPLE_RATE_44100;
 	private int gainBoostLevel = AppConstants.GAIN_BOOST_OFF;
 	private volatile boolean monitoringEnabled = false;
+	private volatile boolean noiseReductionEnabled = false;
 	private final AudioMonitor audioMonitor = AudioMonitor.getInstance();
+	private NoiseReductionListener noiseReductionListener;
 
 	private RecorderContract.RecorderCallback recorderCallback;
 
@@ -138,12 +142,17 @@ public class WavRecorder implements RecorderContract.Recorder {
 				}
 			}
 			if (recorder != null && recorder.getState() == AudioRecord.STATE_INITIALIZED) {
+				// Stop standalone monitoring to release AudioRecord before recording
+				if (audioMonitor.isStandalone()) {
+					audioMonitor.stopStandalone();
+				}
+
 				recorder.startRecording();
 				updateTime = System.currentTimeMillis();
 				isRecording.set(true);
 				recordingThread = new Thread(this::writeAudioDataToFile, "AudioRecorder Thread");
 
-				// Start audio monitoring if enabled
+				// Start audio monitoring if enabled (fed by recording loop)
 				if (monitoringEnabled) {
 					audioMonitor.initialize(sampleRate, channelCount);
 					audioMonitor.start();
@@ -210,10 +219,11 @@ public class WavRecorder implements RecorderContract.Recorder {
 			isPaused.set(false);
 			stopRecordingTimer();
 
-			// Stop audio monitoring
+			// Stop recording-fed monitoring and release audio device
 			if (audioMonitor.isMonitoring()) {
 				audioMonitor.stop();
 			}
+			monitoringEnabled = false;
 
 			if (recorder.getState() == AudioRecord.STATE_INITIALIZED) {
 				try {
@@ -225,8 +235,44 @@ public class WavRecorder implements RecorderContract.Recorder {
 			durationMills = 0;
 			recorder.release();
 			recordingThread.interrupt();
-			if (recorderCallback != null) {
-				recorderCallback.onStopRecord(recordFile);
+
+			// Wait for recording thread to finish writing WAV header
+			try {
+				recordingThread.join(5000);
+			} catch (InterruptedException ignored) {}
+
+			// Apply noise reduction if enabled (synchronous, file is now complete)
+			if (noiseReductionEnabled && recordFile != null && recordFile.exists()) {
+				Timber.d("Starting noise reduction on %s", recordFile.getName());
+				if (noiseReductionListener != null) {
+					AndroidUtils.runOnUIThread(() -> noiseReductionListener.onNoiseReductionStart());
+				}
+				final File fileToProcess = recordFile;
+				new Thread(() -> {
+					boolean success = NoiseReducer.process(
+							fileToProcess,
+							AppConstants.DEFAULT_NOISE_PROFILE_SECONDS,
+							AppConstants.DEFAULT_NOISE_REDUCTION_DB,
+							AppConstants.DEFAULT_NOISE_REDUCTION_SENSITIVITY,
+							AppConstants.DEFAULT_NOISE_REDUCTION_FREQ_SMOOTHING,
+							progress -> {
+								if (noiseReductionListener != null) {
+									AndroidUtils.runOnUIThread(() -> noiseReductionListener.onNoiseReductionProgress(progress));
+								}
+							});
+					Timber.d("Noise reduction %s for %s",
+							success ? "completed" : "failed", fileToProcess.getName());
+					if (noiseReductionListener != null) {
+						AndroidUtils.runOnUIThread(() -> noiseReductionListener.onNoiseReductionEnd(success));
+					}
+					if (recorderCallback != null) {
+						AndroidUtils.runOnUIThread(() -> recorderCallback.onStopRecord(fileToProcess));
+					}
+				}, "NoiseReduction").start();
+			} else {
+				if (recorderCallback != null) {
+					recorderCallback.onStopRecord(recordFile);
+				}
 			}
 		}
 	}
@@ -458,5 +504,23 @@ public class WavRecorder implements RecorderContract.Recorder {
 
 	public boolean isMonitoringEnabled() {
 		return monitoringEnabled;
+	}
+
+	public void setNoiseReductionEnabled(boolean enabled) {
+		this.noiseReductionEnabled = enabled;
+	}
+
+	public boolean isNoiseReductionEnabled() {
+		return noiseReductionEnabled;
+	}
+
+	public void setNoiseReductionListener(NoiseReductionListener listener) {
+		this.noiseReductionListener = listener;
+	}
+
+	public interface NoiseReductionListener {
+		void onNoiseReductionStart();
+		void onNoiseReductionProgress(int percent);
+		void onNoiseReductionEnd(boolean success);
 	}
 }

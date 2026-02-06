@@ -58,6 +58,7 @@ public class PrefsImpl implements Prefs {
 	private static final String PREF_KEY_SETTING_CHANNEL_COUNT = "setting_channel_count";
 	private static final String PREF_KEY_SETTING_AUDIO_SOURCE = "setting_audio_source";
 	private static final String PREF_KEY_GAIN_BOOST_LEVEL = "gain_boost_level";
+	private static final String PREF_KEY_NOISE_REDUCTION_ENABLED = "noise_reduction_enabled";
 
 	private final SharedPreferences sharedPreferences;
 
@@ -422,6 +423,18 @@ public class PrefsImpl implements Prefs {
 	}
 
 	@Override
+	public void setNoiseReductionEnabled(boolean enabled) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putBoolean(PREF_KEY_NOISE_REDUCTION_ENABLED, enabled);
+		editor.apply();
+	}
+
+	@Override
+	public boolean isNoiseReductionEnabled() {
+		return sharedPreferences.getBoolean(PREF_KEY_NOISE_REDUCTION_ENABLED, AppConstants.DEFAULT_NOISE_REDUCTION_ENABLED);
+	}
+
+	@Override
 	public void resetSettings() {
 		SharedPreferences.Editor editor = sharedPreferences.edit();
 //		editor.putString(PREF_KEY_SETTING_THEME_COLOR, AppConstants.DEFAULT_THEME_COLOR);
@@ -432,6 +445,7 @@ public class PrefsImpl implements Prefs {
 		editor.putInt(PREF_KEY_SETTING_CHANNEL_COUNT, AppConstants.DEFAULT_CHANNEL_COUNT);
 		editor.putInt(PREF_KEY_SETTING_AUDIO_SOURCE, AppConstants.DEFAULT_AUDIO_SOURCE);
 		editor.putInt(PREF_KEY_GAIN_BOOST_LEVEL, AppConstants.DEFAULT_GAIN_BOOST_LEVEL);
+		editor.putBoolean(PREF_KEY_NOISE_REDUCTION_ENABLED, AppConstants.DEFAULT_NOISE_REDUCTION_ENABLED);
 		editor.apply();
 	}
 }
