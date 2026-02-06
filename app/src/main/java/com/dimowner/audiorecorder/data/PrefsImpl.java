@@ -215,7 +215,7 @@ public class PrefsImpl implements Prefs {
 	}
 
 	private int getSampleRate() {
-		return sharedPreferences.getInt(PREF_KEY_SAMPLE_RATE, AppConstants.RECORD_SAMPLE_RATE_44100);
+		return sharedPreferences.getInt(PREF_KEY_SAMPLE_RATE, AppConstants.DEFAULT_RECORD_SAMPLE_RATE);
 	}
 
 	@Override
