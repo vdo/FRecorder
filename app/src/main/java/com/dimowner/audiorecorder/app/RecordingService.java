@@ -47,6 +47,7 @@ import com.dimowner.audiorecorder.ColorMap;
 import com.dimowner.audiorecorder.R;
 import com.dimowner.audiorecorder.app.main.MainActivity;
 import com.dimowner.audiorecorder.audio.AudioDeviceManager;
+import com.dimowner.audiorecorder.audio.player.AudioPlayerNew;
 import com.dimowner.audiorecorder.audio.player.PlayerContractNew;
 import com.dimowner.audiorecorder.audio.recorder.RecorderContract;
 import com.dimowner.audiorecorder.data.FileRepository;
@@ -114,6 +115,9 @@ public class RecordingService extends Service {
 		super.onCreate();
 		appRecorder = ARApplication.getInjector().provideAppRecorder(getApplicationContext());
 		audioPlayer = ARApplication.getInjector().provideAudioPlayer();
+		if (audioPlayer instanceof AudioPlayerNew) {
+			((AudioPlayerNew) audioPlayer).setContext(getApplicationContext());
+		}
 		recordingsTasks = ARApplication.getInjector().provideRecordingTasksQueue();
 		localRepository = ARApplication.getInjector().provideLocalRepository(getApplicationContext());
 		prefs = ARApplication.getInjector().providePrefs(getApplicationContext());

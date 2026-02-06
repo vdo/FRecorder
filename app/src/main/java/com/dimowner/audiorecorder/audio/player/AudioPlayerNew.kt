@@ -15,6 +15,8 @@
  */
 package com.dimowner.audiorecorder.audio.player
 
+import android.content.Context
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.MediaPlayer.OnPreparedListener
@@ -35,6 +37,11 @@ class AudioPlayerNew: PlayerContractNew.Player, OnPreparedListener {
 	private var pauseTimeMills: Long = 0
 	private var prevPosMills: Long = 0
 	private val handler = Handler()
+	private var appContext: Context? = null
+
+	fun setContext(context: Context) {
+		this.appContext = context.applicationContext
+	}
 
 	override fun addPlayerCallback(callback: PlayerContractNew.PlayerCallback) {
 		actionsListeners.add(callback)
@@ -50,6 +57,7 @@ class AudioPlayerNew: PlayerContractNew.Player, OnPreparedListener {
 			mediaPlayer.reset()
 			mediaPlayer.setDataSource(dataSource)
 			mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC)
+			routeOutputToNonUsbDevice()
 		} catch (e: Exception) {
 			Timber.e(e)
 			onError(PlayerDataSourceException())
@@ -218,5 +226,29 @@ class AudioPlayerNew: PlayerContractNew.Player, OnPreparedListener {
 		for (i in actionsListeners.indices) {
 			actionsListeners[i].onError(throwable)
 		}
+	}
+
+	private fun routeOutputToNonUsbDevice() {
+		val ctx = appContext ?: return
+		val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+		val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+
+		var bluetooth: AudioDeviceInfo? = null
+		var wired: AudioDeviceInfo? = null
+		var speaker: AudioDeviceInfo? = null
+
+		for (device in devices) {
+			when (device.type) {
+				AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, AudioDeviceInfo.TYPE_BLE_HEADSET -> bluetooth = device
+				AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> if (bluetooth == null) bluetooth = device
+				AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> wired = device
+				AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> speaker = device
+			}
+		}
+
+		val outputDevice = bluetooth ?: wired ?: speaker ?: return
+		val set = mediaPlayer.setPreferredDevice(outputDevice)
+		Timber.d("Player: set preferred output device: %s (type=%d), success=%b",
+			outputDevice.productName, outputDevice.type, set)
 	}
 }

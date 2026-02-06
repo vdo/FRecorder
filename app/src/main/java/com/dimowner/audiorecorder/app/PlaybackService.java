@@ -39,6 +39,7 @@ import com.dimowner.audiorecorder.AppConstants;
 import com.dimowner.audiorecorder.ColorMap;
 import com.dimowner.audiorecorder.R;
 import com.dimowner.audiorecorder.app.main.MainActivity;
+import com.dimowner.audiorecorder.audio.player.AudioPlayerNew;
 import com.dimowner.audiorecorder.audio.player.PlayerContractNew;
 import com.dimowner.audiorecorder.exception.AppException;
 import com.dimowner.audiorecorder.util.ExtensionsKt;
@@ -94,6 +95,9 @@ public class PlaybackService extends Service {
 		super.onCreate();
 
 		audioPlayer = ARApplication.getInjector().provideAudioPlayer();
+		if (audioPlayer instanceof AudioPlayerNew) {
+			((AudioPlayerNew) audioPlayer).setContext(getApplicationContext());
+		}
 		colorMap = ARApplication.getInjector().provideColorMap(getApplicationContext());
 
 		if (playerCallback == null) {

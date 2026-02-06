@@ -60,6 +60,8 @@ import com.dimowner.audiorecorder.app.widget.RecordingWaveformView;
 import com.dimowner.audiorecorder.app.widget.WaveformViewNew;
 import com.dimowner.audiorecorder.AppConstants;
 import com.dimowner.audiorecorder.audio.AudioDecoder;
+import com.dimowner.audiorecorder.audio.player.AudioPlayerNew;
+import com.dimowner.audiorecorder.audio.player.PlayerContractNew;
 import com.dimowner.audiorecorder.audio.AudioDeviceManager;
 import com.dimowner.audiorecorder.audio.monitor.AudioMonitor;
 import com.dimowner.audiorecorder.audio.recorder.RecorderContract;
@@ -280,12 +282,17 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			}
 		}
 		checkNotificationPermission();
+		checkRecordPermission2();
 	}
 
 	@Override
 	protected void onStart() {
 		super.onStart();
 		presenter.bindView(this);
+		PlayerContractNew.Player player = ARApplication.getInjector().provideAudioPlayer();
+		if (player instanceof AudioPlayerNew) {
+			((AudioPlayerNew) player).setContext(getApplicationContext());
+		}
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 			//This is needed for scoped storage support
 			presenter.storeInPrivateDir(getApplicationContext());
