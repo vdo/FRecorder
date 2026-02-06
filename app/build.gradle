@@ -13,7 +13,7 @@ android {
 		minSdkVersion 23
 		targetSdkVersion 35
 		versionCode 935
-		versionName "0.9.99"
+		versionName "0.2.0"
 	}
 
 	buildFeatures {

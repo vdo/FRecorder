@@ -183,7 +183,7 @@ public class AppConstants {
 	public static final float DEFAULT_NOISE_PROFILE_SECONDS = 1.0f;
 	public final static int RECORD_MAX_DURATION = 14400000; // 240 min 4 hours
 
-	public static final String DEFAULT_THEME_COLOR = THEME_BLUE_GREY;
+	public static final String DEFAULT_THEME_COLOR = THEME_BLACK;
 	public static final String DEFAULT_RECORDING_FORMAT = FORMAT_M4A;
 	public static final String DEFAULT_NAME_FORMAT = NAME_FORMAT_RECORD;
 	public static final int DEFAULT_RECORD_SAMPLE_RATE = RECORD_SAMPLE_RATE_44100;

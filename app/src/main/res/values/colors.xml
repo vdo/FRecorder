@@ -19,7 +19,7 @@
 	<color name="divider">#12FFFFFF</color>
 	<color name="divider_light">#05FFFFFF</color>
 
-	<color name="icon_background">#9E9E9E</color>
+	<color name="icon_background">#FFFFFF</color>
 	<color name="highlight_light">#A1FFFFFF</color>
 
 	<!--reds-->

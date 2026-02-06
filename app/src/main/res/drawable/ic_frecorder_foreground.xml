@@ -5,7 +5,12 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Gray circle background -->
+    <!-- White circle background -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,54m-42,0a42,42 0,1 1,84 0a42,42 0,1 1,-84 0" />
+
+    <!-- Gray circle foreground -->
     <path
         android:fillColor="#757575"
         android:pathData="M54,54m-36,0a36,36 0,1 1,72 0a36,36 0,1 1,-72 0" />

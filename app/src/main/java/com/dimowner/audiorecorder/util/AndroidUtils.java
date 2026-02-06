@@ -34,6 +34,7 @@ import android.media.MediaFormat;
 import android.net.Uri;
 import androidx.core.content.FileProvider;
 import android.text.Editable;
+import android.text.Html;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.SpannableStringBuilder;
@@ -495,7 +496,7 @@ public class AndroidUtils {
 			title.setCompoundDrawablesRelativeWithIntrinsicBounds(drawableRes, 0, 0, 0);
 		}
 		if (contentResId > 0) {
-			((TextView) view.findViewById(R.id.dialog_content)).setText(contentResId);
+			((TextView) view.findViewById(R.id.dialog_content)).setText(Html.fromHtml(activity.getString(contentResId), Html.FROM_HTML_MODE_COMPACT));
 		} else {
 			((TextView) view.findViewById(R.id.dialog_content)).setText(contentStr);
 		}
