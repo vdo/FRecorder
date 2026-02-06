@@ -261,8 +261,9 @@ public class AudioDecoder {
 
 		boolean isInTrash = false;
 		try {
-			if (!inputFile.exists()) {
-				throw new java.io.FileNotFoundException(inputFile.getAbsolutePath());
+			File canonicalFile = inputFile.getCanonicalFile();
+			if (!canonicalFile.exists()) {
+				throw new java.io.FileNotFoundException(canonicalFile.getAbsolutePath());
 			}
 			String name = inputFile.getName().toLowerCase();
 			String[] components = name.split("\\.");
@@ -278,7 +279,7 @@ public class AudioDecoder {
 			MediaFormat format = null;
 			int i;
 
-			extractor.setDataSource(inputFile.getPath());
+			extractor.setDataSource(canonicalFile.getPath());
 			int numTracks = extractor.getTrackCount();
 			// find and select the first audio track present in the file.
 			for (i = 0; i < numTracks; i++) {

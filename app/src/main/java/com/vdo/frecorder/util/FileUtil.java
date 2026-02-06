@@ -60,6 +60,40 @@ public class FileUtil {
 	private FileUtil() {
 	}
 
+	/**
+	 * Sanitize a file name by removing path separators and traversal sequences.
+	 * This prevents path traversal attacks when the name comes from uncontrolled input.
+	 */
+	public static String sanitizeFileName(String name) {
+		if (name == null) return null;
+		// Remove any path separators and parent-directory references
+		String sanitized = name.replace("..", "")
+				.replace(File.separator, "")
+				.replace("/", "")
+				.replace("\\", "")
+				.replace("\0", "");
+		if (sanitized.isEmpty()) {
+			return null;
+		}
+		return sanitized;
+	}
+
+	/**
+	 * Validate that the given file's canonical path is under the expected parent directory.
+	 * This prevents path traversal attacks.
+	 * @return true if the file is safely within parentDir, false otherwise.
+	 */
+	public static boolean isPathWithinDir(File file, File parentDir) {
+		try {
+			String canonicalFile = file.getCanonicalPath();
+			String canonicalParent = parentDir.getCanonicalPath() + File.separator;
+			return canonicalFile.startsWith(canonicalParent);
+		} catch (IOException e) {
+			Timber.e(e, "Failed to resolve canonical path");
+			return false;
+		}
+	}
+
 	public static File getAppDir() {
 		return getStorageDir(AppConstants.APPLICATION_NAME);
 	}
@@ -240,11 +274,15 @@ public class FileUtil {
 	 * @return true if copy succeed, otherwise - false.
 	 */
 	public static boolean copyFile(FileDescriptor fileToCopy, File newFile) throws IOException {
+		if (newFile.getParentFile() != null && !isPathWithinDir(newFile, newFile.getParentFile())) {
+			Log.e(LOG_TAG, "Path traversal detected in copyFile, rejecting: " + newFile.getPath());
+			return false;
+		}
 		FileInputStream in = null;
 		FileOutputStream out = null;
 		try {
 			in = new FileInputStream(fileToCopy);
-			out = new FileOutputStream(newFile);
+			out = new FileOutputStream(newFile.getCanonicalFile());
 
 			if (copyLarge(in, out) > 0) {
 				return true;
@@ -377,9 +415,18 @@ public class FileUtil {
 	 */
 	public static File createFile(File path, String fileName) {
 		if (path != null) {
+			String safeName = sanitizeFileName(fileName);
+			if (safeName == null) {
+				Log.e(LOG_TAG, "Invalid file name after sanitization: " + fileName);
+				return null;
+			}
 			createDir(path);
-			Log.d(LOG_TAG, "createFile path = " + path.getAbsolutePath() + " fileName = " + fileName);
-			File file = new File(path, fileName);
+			Log.d(LOG_TAG, "createFile path = " + path.getAbsolutePath() + " fileName = " + safeName);
+			File file = new File(path, safeName);
+			if (!isPathWithinDir(file, path)) {
+				Log.e(LOG_TAG, "Path traversal detected, rejecting file: " + safeName);
+				return null;
+			}
 			//Create file if need.
 			if (!file.exists()) {
 				try {
@@ -396,7 +443,7 @@ public class FileUtil {
 				Log.e(LOG_TAG, "File already exists!! Please rename file!");
 				Log.i(LOG_TAG, "Renaming file");
 //				TODO: Find better way to rename file.
-				return createFile(path, "1" + fileName);
+				return createFile(path, "1" + safeName);
 			}
 			if (!file.canWrite()) {
 				Log.e(LOG_TAG, "The file can not be written.");
