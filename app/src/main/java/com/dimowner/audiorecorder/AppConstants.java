@@ -37,7 +37,7 @@ public class AppConstants {
 
 	public static final String REQUESTS_RECEIVER = "dmitriy.ponomarenko.ua@gmail.com";
 
-	public static final String APPLICATION_NAME = "AudioRecorder";
+	public static final String APPLICATION_NAME = "FRecorder";
 	public static final String RECORDS_DIR = "records";
 	public static final String SEPARATOR = ", ";
 	public static final String EXTENSION_SEPARATOR = ".";
@@ -55,6 +55,16 @@ public class AppConstants {
 	public static final String THEME_BLUE_GREY = "blue_gray";
 
 	public static final String[] SUPPORTED_EXT = new String[]{"mp3", "wav", "3gpp", "3gp", "amr", "aac", "m4a", "mp4", "ogg", "flac"};
+
+	// Output format constants (format the final file is saved as)
+	public static final String OUTPUT_FORMAT_WAV = "wav";
+	public static final String OUTPUT_FORMAT_MP3 = "mp3";
+	public static final String OUTPUT_FORMAT_FLAC = "flac";
+
+	// Bit depth constants for WAV output
+	public static final int BIT_DEPTH_16 = 16;
+	public static final int BIT_DEPTH_24 = 24;
+	public static final int DEFAULT_BIT_DEPTH = BIT_DEPTH_24;
 
 	public static final String FORMAT_M4A = "m4a";
 	public static final String FORMAT_WAV = "wav";
@@ -127,6 +137,7 @@ public class AppConstants {
 	public static final int RECORD_ENCODING_BITRATE_192000 = 192000;
 	public static final int RECORD_ENCODING_BITRATE_256000 = 256000;
 	public static final int RECORD_ENCODING_BITRATE_288000 = 288000;
+	public static final int RECORD_ENCODING_BITRATE_320000 = 320000;
 
 	public static final int SORT_DATE = 1;
 	public static final int SORT_NAME = 2;
@@ -150,12 +161,44 @@ public class AppConstants {
 	public static final float GAIN_BOOST_MULTIPLIER_6DB = 2.0f;   // 10^(6/20) ≈ 1.995
 	public static final float GAIN_BOOST_MULTIPLIER_12DB = 4.0f;  // 10^(12/20) ≈ 3.981
 	public static final int DEFAULT_GAIN_BOOST_LEVEL = GAIN_BOOST_OFF;
+
+	// High-pass filter constants
+	public static final int HPF_OFF = 0;
+	public static final int HPF_80 = 1;
+	public static final int HPF_120 = 2;
+	public static final float HPF_FREQ_80 = 80.0f;
+	public static final float HPF_FREQ_120 = 120.0f;
+	public static final int DEFAULT_HPF_MODE = HPF_OFF;
+
+	// Low-pass filter constants
+	public static final int LPF_OFF = 0;
+	public static final int LPF_9500 = 1;
+	public static final int LPF_15000 = 2;
+	public static final float LPF_FREQ_9500 = 9500.0f;
+	public static final float LPF_FREQ_15000 = 15000.0f;
+	public static final int DEFAULT_LPF_MODE = LPF_OFF;
+
+	// Noise gate constants (monitor-only)
+	public static final boolean DEFAULT_NOISE_GATE_ENABLED = false;
+	public static final int NOISE_GATE_THRESHOLD_RMS = 400;
+	public static final float NOISE_GATE_ATTACK_MS = 1.0f;
+	public static final float NOISE_GATE_HOLD_MS = 250.0f;
+	public static final float NOISE_GATE_RELEASE_MS = 160.0f;
+	public static final float NOISE_GATE_HYSTERESIS = 0.6f;
+
+	// Noise reduction constants (disabled by default)
+	public static final boolean DEFAULT_NOISE_REDUCTION_ENABLED = false;
+	public static final float DEFAULT_NOISE_REDUCTION_DB = 12.0f;
+	public static final float DEFAULT_NOISE_REDUCTION_SENSITIVITY = 12.0f;
+	public static final int DEFAULT_NOISE_REDUCTION_FREQ_SMOOTHING = 3;
+	public static final float DEFAULT_NOISE_PROFILE_SECONDS = 1.0f;
 	public final static int RECORD_MAX_DURATION = 14400000; // 240 min 4 hours
 
-	public static final String DEFAULT_THEME_COLOR = THEME_BLUE_GREY;
-	public static final String DEFAULT_RECORDING_FORMAT = FORMAT_M4A;
+	public static final String DEFAULT_THEME_COLOR = THEME_BLACK;
+	public static final String DEFAULT_RECORDING_FORMAT = FORMAT_WAV;
+	public static final String DEFAULT_OUTPUT_FORMAT = OUTPUT_FORMAT_WAV;
 	public static final String DEFAULT_NAME_FORMAT = NAME_FORMAT_RECORD;
-	public static final int DEFAULT_RECORD_SAMPLE_RATE = RECORD_SAMPLE_RATE_44100;
+	public static final int DEFAULT_RECORD_SAMPLE_RATE = RECORD_SAMPLE_RATE_48000;
 	public static final int DEFAULT_RECORD_ENCODING_BITRATE = RECORD_ENCODING_BITRATE_128000;
 	public static final int DEFAULT_CHANNEL_COUNT = RECORD_AUDIO_STEREO;
 

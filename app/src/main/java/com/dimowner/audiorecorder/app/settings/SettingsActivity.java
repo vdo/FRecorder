@@ -77,6 +77,7 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 	private Switch swPublicDir;
 	private Switch swKeepScreenOn;
 	private Switch swAskToRename;
+	private Switch swNoiseReduction;
 
 	private Spinner nameFormatSelector;
 	private Spinner audioSourceSelector;
@@ -85,6 +86,8 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 	private SettingView sampleRateSetting;
 	private SettingView bitrateSetting;
 	private SettingView channelsSetting;
+	private SettingView outputFormatSetting;
+	private SettingView bitDepthSetting;
 	private SettingView gainBoostSetting;
 	private Button btnReset;
 
@@ -149,8 +152,7 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 		TextView txtAbout = findViewById(R.id.txtAbout);
 		txtAbout.setText(getAboutContent());
 		findViewById(R.id.btnTrash).setOnClickListener(this);
-		findViewById(R.id.btnRate).setOnClickListener(this);
-		findViewById(R.id.btnRequest).setOnClickListener(this);
+		findViewById(R.id.btnCredits).setOnClickListener(this);
 		panelPublicDir = findViewById(R.id.panelPublicDir);
 		txtFileBrowser = findViewById(R.id.btn_file_browser);
 		txtFileBrowser.setOnClickListener(this);
@@ -168,11 +170,9 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 		swAskToRename.setOnCheckedChangeListener((btn, isChecked) -> presenter.askToRenameAfterRecordingStop(isChecked));
 
 		formatSetting = findViewById(R.id.setting_recording_format);
-		formats = getResources().getStringArray(R.array.formats2);
+		formats = new String[] { "Wav" };
 		formatsKeys = new String[] {
-				AppConstants.FORMAT_M4A,
-				AppConstants.FORMAT_WAV,
-				AppConstants.FORMAT_3GP
+				AppConstants.FORMAT_WAV
 		};
 		formatSetting.setData(formats, formatsKeys);
 		formatSetting.setOnChipCheckListener((key, name, checked) -> presenter.setSettingRecordingFormat(key));
@@ -221,6 +221,29 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 		channelsSetting.setTitle(R.string.channels);
 		channelsSetting.setOnInfoClickListener(v -> AndroidUtils.showInfoDialog(SettingsActivity.this, R.string.info_channels));
 
+		outputFormatSetting = findViewById(R.id.setting_output_format);
+		String[] outputFormats = new String[] { "WAV", "MP3 320kbps", "FLAC" };
+		String[] outputFormatKeys = new String[] {
+				AppConstants.OUTPUT_FORMAT_WAV,
+				AppConstants.OUTPUT_FORMAT_MP3,
+				AppConstants.OUTPUT_FORMAT_FLAC
+		};
+		outputFormatSetting.setData(outputFormats, outputFormatKeys);
+		outputFormatSetting.setOnChipCheckListener((key, name, checked) -> presenter.setSettingOutputFormat(key));
+		outputFormatSetting.setTitle(R.string.output_format);
+		outputFormatSetting.setOnInfoClickListener(v -> AndroidUtils.showInfoDialog(SettingsActivity.this, R.string.info_output_format));
+
+		bitDepthSetting = findViewById(R.id.setting_bit_depth);
+		String[] bitDepths = new String[] { "16-bit", "24-bit" };
+		String[] bitDepthKeys = new String[] {
+				SettingsMapper.BIT_DEPTH_16_KEY,
+				SettingsMapper.BIT_DEPTH_24_KEY
+		};
+		bitDepthSetting.setData(bitDepths, bitDepthKeys);
+		bitDepthSetting.setOnChipCheckListener((key, name, checked) -> presenter.setSettingBitDepth(SettingsMapper.keyToBitDepth(key)));
+		bitDepthSetting.setTitle(R.string.bit_depth);
+		bitDepthSetting.setOnInfoClickListener(v -> AndroidUtils.showInfoDialog(SettingsActivity.this, R.string.info_bit_depth));
+
 		gainBoostSetting = findViewById(R.id.setting_gain_boost);
 		String[] gainBoostOptions = new String[] {
 				getString(R.string.gain_boost_off),
@@ -235,6 +258,9 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 		gainBoostSetting.setData(gainBoostOptions, gainBoostKeys);
 		gainBoostSetting.setOnChipCheckListener((key, name, checked) -> presenter.setGainBoostLevel(SettingsMapper.keyToGainBoostLevel(key)));
 		gainBoostSetting.setTitle(R.string.gain_boost);
+
+		swNoiseReduction = findViewById(R.id.swNoiseReduction);
+		swNoiseReduction.setOnCheckedChangeListener((btn, isChecked) -> presenter.setNoiseReductionEnabled(isChecked));
 
 		audioSourceSelector = findViewById(R.id.audio_source_selector);
 		audioSourceSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -321,11 +347,11 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 		nameFormatSelector = findViewById(R.id.name_format);
 		List<AppSpinnerAdapter.ThemeItem> items = new ArrayList<>();
 		String[] values = new String[5];
-		values[0] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameCounted(1) + ".m4a";
-		values[1] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameDateVariant() + ".m4a";
-		values[2] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameDateUS() + ".m4a";
-		values[3] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameDateISO8601() + ".m4a";
-		values[4] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameMills() + ".m4a";
+		values[0] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameCounted(1) + ".wav";
+		values[1] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameDateVariant() + ".wav";
+		values[2] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameDateUS() + ".wav";
+		values[3] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameDateISO8601() + ".wav";
+		values[4] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameMills() + ".wav";
 		for (String value : values) {
 			items.add(new AppSpinnerAdapter.ThemeItem(value,
 					getApplicationContext().getResources().getColor(colorMap.getPrimaryColorRes())));
@@ -383,13 +409,11 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 			presenter.onRecordsLocationClick();
 		} else if (id == R.id.btn_file_browser) {
 			startActivity(FileBrowserActivity.getStartIntent(getApplicationContext()));
-		} else if (id == R.id.btnRate) {
-			rateApp();
 		} else if (id == R.id.btnReset) {
 			presenter.resetSettings();
 			presenter.loadSettings();
-		} else if (id == R.id.btnRequest) {
-			requestFeature();
+		} else if (id == R.id.btnCredits) {
+			showCreditsDialog();
 		}
 	}
 
@@ -399,40 +423,8 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 		ARApplication.getInjector().releaseSettingsPresenter();
 	}
 
-	public void rateApp() {
-		try {
-			Intent rateIntent = rateIntentForUrl("market://details");
-			startActivity(rateIntent);
-		} catch (ActivityNotFoundException e) {
-			Intent rateIntent = rateIntentForUrl("https://play.google.com/store/apps/details");
-			startActivity(rateIntent);
-		}
-	}
-
-	private void requestFeature() {
-		Intent i = new Intent(Intent.ACTION_SEND);
-		i.setType("message/rfc822");
-		i.putExtra(Intent.EXTRA_EMAIL, new String[]{AppConstants.REQUESTS_RECEIVER});
-		i.putExtra(Intent.EXTRA_SUBJECT,
-				"[" + getResources().getString(R.string.app_name)
-						+ "] " + AndroidUtils.getAppVersion(getApplicationContext())
-						+ " - " + getResources().getString(R.string.request)
-		);
-		try {
-			Intent chooser = Intent.createChooser(i, getResources().getString(R.string.send_email));
-			chooser.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-			startActivity(chooser);
-		} catch (android.content.ActivityNotFoundException ex) {
-			showError(R.string.email_clients_not_found);
-		}
-	}
-
-	private Intent rateIntentForUrl(String url) {
-		Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(String.format("%s?id=%s", url, getApplicationContext().getPackageName())));
-		int flags = Intent.FLAG_ACTIVITY_NO_HISTORY | Intent.FLAG_ACTIVITY_MULTIPLE_TASK;
-			flags |= Intent.FLAG_ACTIVITY_NEW_DOCUMENT;
-		intent.addFlags(flags);
-		return intent;
+	private void showCreditsDialog() {
+		AndroidUtils.showInfoDialog(this, R.string.credits_message);
 	}
 
 	public SpannableStringBuilder getAboutContent() {
@@ -507,6 +499,11 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 	}
 
 	@Override
+	public void showNoiseReductionEnabled(boolean enabled) {
+		swNoiseReduction.setChecked(enabled);
+	}
+
+	@Override
 	public void showAskToRenameAfterRecordingStop(boolean b) {
 		swAskToRename.setChecked(b);
 	}
@@ -524,6 +521,16 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 	@Override
 	public void showRecordingFormat(String formatKey) {
 		formatSetting.setSelected(formatKey);
+	}
+
+	@Override
+	public void showOutputFormat(String outputFormatKey) {
+		outputFormatSetting.setSelected(outputFormatKey);
+	}
+
+	@Override
+	public void showBitDepth(int bitDepth) {
+		bitDepthSetting.setSelected(SettingsMapper.bitDepthToKey(bitDepth));
 	}
 
 	@Override
@@ -578,34 +585,7 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 
 	@Override
 	public void updateRecordingInfo(String format) {
-		String[] sampleRates = new String[] {
-				sampleRatesKeys[2],
-				sampleRatesKeys[3],
-				sampleRatesKeys[4],
-				sampleRatesKeys[5]
-		};
-		if (format.equals(AppConstants.FORMAT_3GP)) {
-			sampleRateSetting.removeChip(sampleRates);
-			if (sampleRateSetting.getSelected() == null) {
-				sampleRateSetting.setSelected(sampleRatesKeys[1]);
-				presenter.setSettingSampleRate(SettingsMapper.keyToSampleRate(sampleRatesKeys[1]));
-			}
-		} else {
-			String[] values = new String[] {
-					this.sampleRates[2],
-					this.sampleRates[3],
-					this.sampleRates[4],
-					this.sampleRates[5]
-			};
-			sampleRateSetting.addChip(sampleRates, values);
-		}
-
-		if (format.equals(AppConstants.FORMAT_3GP)) {
-			channelsSetting.removeChip(new String[] {SettingsMapper.CHANNEL_COUNT_STEREO});
-			channelsSetting.setSelected(SettingsMapper.CHANNEL_COUNT_MONO);
-		} else {
-			channelsSetting.addChip(new String[] {SettingsMapper.CHANNEL_COUNT_STEREO}, new String[] {getString(R.string.stereo)});
-		}
+		// WAV is the only recording format now; all sample rates and channels are available
 	}
 
 	@Override
@@ -655,6 +635,8 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 		sampleRateSetting.setEnabled(true);
 		bitrateSetting.setEnabled(true);
 		channelsSetting.setEnabled(true);
+		outputFormatSetting.setEnabled(true);
+		bitDepthSetting.setEnabled(true);
 		audioSourceSelector.setEnabled(true);
 		gainBoostSetting.setEnabled(true);
 	}
@@ -666,6 +648,8 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 		sampleRateSetting.setEnabled(false);
 		bitrateSetting.setEnabled(false);
 		channelsSetting.setEnabled(false);
+		outputFormatSetting.setEnabled(false);
+		bitDepthSetting.setEnabled(false);
 		audioSourceSelector.setEnabled(false);
 		gainBoostSetting.setEnabled(false);
 	}

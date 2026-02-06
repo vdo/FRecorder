@@ -70,6 +70,9 @@ public class SettingsMapper {
 	public final static String CHANNEL_COUNT_STEREO = "stereo";
 	public final static String CHANNEL_COUNT_MONO = "mono";
 
+	public final static String BIT_DEPTH_16_KEY = "16";
+	public final static String BIT_DEPTH_24_KEY = "24";
+
 	public final static String GAIN_BOOST_OFF_KEY = "off";
 	public final static String GAIN_BOOST_6DB_KEY = "6db";
 	public final static String GAIN_BOOST_12DB_KEY = "12db";
@@ -88,9 +91,7 @@ public class SettingsMapper {
 		resources = context.getResources();
 		formats = resources.getStringArray(R.array.formats2);
 		formatsKeys = new String[] {
-				AppConstants.FORMAT_M4A,
-				AppConstants.FORMAT_WAV,
-				AppConstants.FORMAT_3GP
+				AppConstants.FORMAT_WAV
 		};
 		sampleRates = resources.getStringArray(R.array.sample_rates2);
 		sampleRatesKeys = new String[] {
@@ -298,6 +299,82 @@ public class SettingsMapper {
 			case AppConstants.RECORD_AUDIO_STEREO:
 			default:
 				return CHANNEL_COUNT_STEREO;
+		}
+	}
+
+	public static int positionToOutputFormat(int position) {
+		switch (position) {
+			case 0:
+			default:
+				return 0; // WAV
+			case 1:
+				return 1; // MP3
+			case 2:
+				return 2; // FLAC
+		}
+	}
+
+	public static String outputFormatPositionToKey(int position) {
+		switch (position) {
+			case 0:
+			default:
+				return AppConstants.OUTPUT_FORMAT_WAV;
+			case 1:
+				return AppConstants.OUTPUT_FORMAT_MP3;
+			case 2:
+				return AppConstants.OUTPUT_FORMAT_FLAC;
+		}
+	}
+
+	public static int outputFormatKeyToPosition(String key) {
+		switch (key) {
+			case AppConstants.OUTPUT_FORMAT_WAV:
+			default:
+				return 0;
+			case AppConstants.OUTPUT_FORMAT_MP3:
+				return 1;
+			case AppConstants.OUTPUT_FORMAT_FLAC:
+				return 2;
+		}
+	}
+
+	public static int bitDepthToPosition(int bitDepth) {
+		switch (bitDepth) {
+			case AppConstants.BIT_DEPTH_16:
+			default:
+				return 0;
+			case AppConstants.BIT_DEPTH_24:
+				return 1;
+		}
+	}
+
+	public static int positionToBitDepth(int position) {
+		switch (position) {
+			case 0:
+			default:
+				return AppConstants.BIT_DEPTH_16;
+			case 1:
+				return AppConstants.BIT_DEPTH_24;
+		}
+	}
+
+	public static String bitDepthToKey(int bitDepth) {
+		switch (bitDepth) {
+			case AppConstants.BIT_DEPTH_16:
+			default:
+				return BIT_DEPTH_16_KEY;
+			case AppConstants.BIT_DEPTH_24:
+				return BIT_DEPTH_24_KEY;
+		}
+	}
+
+	public static int keyToBitDepth(String key) {
+		switch (key) {
+			case BIT_DEPTH_16_KEY:
+			default:
+				return AppConstants.BIT_DEPTH_16;
+			case BIT_DEPTH_24_KEY:
+				return AppConstants.BIT_DEPTH_24;
 		}
 	}
 

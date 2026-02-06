@@ -38,6 +38,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import timber.log.Timber;
 import static com.dimowner.audiorecorder.AppConstants.RECORDING_VISUALIZATION_INTERVAL;
 import androidx.annotation.RequiresPermission;
+import com.dimowner.audiorecorder.audio.noise.NoiseReducer;
+import com.dimowner.audiorecorder.util.AndroidUtils;
 
 public class WavRecorder implements RecorderContract.Recorder {
 
@@ -64,7 +66,18 @@ public class WavRecorder implements RecorderContract.Recorder {
 	private int sampleRate = AppConstants.RECORD_SAMPLE_RATE_44100;
 	private int gainBoostLevel = AppConstants.GAIN_BOOST_OFF;
 	private volatile boolean monitoringEnabled = false;
+	private volatile boolean noiseReductionEnabled = false;
+	private volatile int hpfMode = AppConstants.HPF_OFF;
+	private volatile int lpfMode = AppConstants.LPF_OFF;
+
+	// Biquad filter state (per channel not needed since we process interleaved mono/stereo as single stream of samples)
+	private double hpfX1 = 0, hpfX2 = 0, hpfY1 = 0, hpfY2 = 0;
+	private double lpfX1 = 0, lpfX2 = 0, lpfY1 = 0, lpfY2 = 0;
+	private double[] hpfCoeffs = null; // {b0, b1, b2, a1, a2}
+	private double[] lpfCoeffs = null;
+
 	private final AudioMonitor audioMonitor = AudioMonitor.getInstance();
+	private NoiseReductionListener noiseReductionListener;
 
 	private RecorderContract.RecorderCallback recorderCallback;
 
@@ -138,12 +151,18 @@ public class WavRecorder implements RecorderContract.Recorder {
 				}
 			}
 			if (recorder != null && recorder.getState() == AudioRecord.STATE_INITIALIZED) {
+				// Stop standalone monitoring to release AudioRecord before recording
+				if (audioMonitor.isStandalone()) {
+					audioMonitor.stopStandalone();
+				}
+
+				initFilters();
 				recorder.startRecording();
 				updateTime = System.currentTimeMillis();
 				isRecording.set(true);
 				recordingThread = new Thread(this::writeAudioDataToFile, "AudioRecorder Thread");
 
-				// Start audio monitoring if enabled
+				// Start audio monitoring if enabled (fed by recording loop)
 				if (monitoringEnabled) {
 					audioMonitor.initialize(sampleRate, channelCount);
 					audioMonitor.start();
@@ -172,13 +191,21 @@ public class WavRecorder implements RecorderContract.Recorder {
 	public void resumeRecording() {
 		if (recorder != null && recorder.getState() == AudioRecord.STATE_INITIALIZED) {
 			if (isPaused.get()) {
+				// Stop standalone monitoring before recording resumes (releases AudioRecord)
+				if (audioMonitor.isStandalone()) {
+					audioMonitor.stopStandalone();
+				}
+
 				updateTime = System.currentTimeMillis();
 				scheduleRecordingTimeUpdate();
 				recorder.startRecording();
 
-				// Resume audio monitoring if enabled
-				if (monitoringEnabled && audioMonitor.isPaused()) {
-					audioMonitor.resume();
+				// Restart recording-fed monitoring
+				if (monitoringEnabled) {
+					if (!audioMonitor.isMonitoring()) {
+						audioMonitor.initialize(sampleRate, channelCount);
+						audioMonitor.start();
+					}
 				}
 
 				if (recorderCallback != null) {
@@ -196,6 +223,12 @@ public class WavRecorder implements RecorderContract.Recorder {
 			durationMills += System.currentTimeMillis() - updateTime;
 			pauseRecordingTimer();
 
+			// Switch monitoring to standalone so user keeps hearing audio while paused
+			if (monitoringEnabled && audioMonitor.isMonitoring()) {
+				audioMonitor.stop();
+				audioMonitor.startStandalone(sampleRate, channelCount, null);
+			}
+
 			isPaused.set(true);
 			if (recorderCallback != null) {
 				recorderCallback.onPauseRecord();
@@ -210,8 +243,8 @@ public class WavRecorder implements RecorderContract.Recorder {
 			isPaused.set(false);
 			stopRecordingTimer();
 
-			// Stop audio monitoring
-			if (audioMonitor.isMonitoring()) {
+			// Stop recording-fed monitoring; will restart as standalone after recording thread finishes
+			if (audioMonitor.isMonitoring() && !audioMonitor.isStandalone()) {
 				audioMonitor.stop();
 			}
 
@@ -225,8 +258,49 @@ public class WavRecorder implements RecorderContract.Recorder {
 			durationMills = 0;
 			recorder.release();
 			recordingThread.interrupt();
-			if (recorderCallback != null) {
-				recorderCallback.onStopRecord(recordFile);
+
+			// Wait for recording thread to finish writing WAV header
+			try {
+				recordingThread.join(5000);
+			} catch (InterruptedException ignored) {}
+
+			// Restart monitoring as standalone now that AudioRecord is released
+			if (monitoringEnabled && !audioMonitor.isMonitoring()) {
+				audioMonitor.startStandalone(sampleRate, channelCount, null);
+			}
+
+			// Apply noise reduction if enabled (synchronous, file is now complete)
+			if (noiseReductionEnabled && recordFile != null && recordFile.exists()) {
+				Timber.d("Starting noise reduction on %s", recordFile.getName());
+				if (noiseReductionListener != null) {
+					AndroidUtils.runOnUIThread(() -> noiseReductionListener.onNoiseReductionStart());
+				}
+				final File fileToProcess = recordFile;
+				new Thread(() -> {
+					boolean success = NoiseReducer.process(
+							fileToProcess,
+							AppConstants.DEFAULT_NOISE_PROFILE_SECONDS,
+							AppConstants.DEFAULT_NOISE_REDUCTION_DB,
+							AppConstants.DEFAULT_NOISE_REDUCTION_SENSITIVITY,
+							AppConstants.DEFAULT_NOISE_REDUCTION_FREQ_SMOOTHING,
+							progress -> {
+								if (noiseReductionListener != null) {
+									AndroidUtils.runOnUIThread(() -> noiseReductionListener.onNoiseReductionProgress(progress));
+								}
+							});
+					Timber.d("Noise reduction %s for %s",
+							success ? "completed" : "failed", fileToProcess.getName());
+					if (noiseReductionListener != null) {
+						AndroidUtils.runOnUIThread(() -> noiseReductionListener.onNoiseReductionEnd(success));
+					}
+					if (recorderCallback != null) {
+						AndroidUtils.runOnUIThread(() -> recorderCallback.onStopRecord(fileToProcess));
+					}
+				}, "NoiseReduction").start();
+			} else {
+				if (recorderCallback != null) {
+					recorderCallback.onStopRecord(recordFile);
+				}
 			}
 		}
 	}
@@ -271,14 +345,38 @@ public class WavRecorder implements RecorderContract.Recorder {
 							float multiplier = getGainMultiplier();
 							if (multiplier > 1.0f) {
 								int amplified = (int) (sample * multiplier);
-								// Clamp to prevent clipping
 								if (amplified > Short.MAX_VALUE) amplified = Short.MAX_VALUE;
 								if (amplified < Short.MIN_VALUE) amplified = Short.MIN_VALUE;
 								sample = (short) amplified;
-								// Write back the amplified sample
-								data[i] = (byte) (sample & 0xff);
-								data[i+1] = (byte) ((sample >> 8) & 0xff);
 							}
+
+							// Apply high-pass filter
+							if (hpfCoeffs != null) {
+								double x = sample;
+								double y = hpfCoeffs[0]*x + hpfCoeffs[1]*hpfX1 + hpfCoeffs[2]*hpfX2 - hpfCoeffs[3]*hpfY1 - hpfCoeffs[4]*hpfY2;
+								hpfX2 = hpfX1; hpfX1 = x;
+								hpfY2 = hpfY1; hpfY1 = y;
+								int clamped = (int) Math.round(y);
+								if (clamped > Short.MAX_VALUE) clamped = Short.MAX_VALUE;
+								if (clamped < Short.MIN_VALUE) clamped = Short.MIN_VALUE;
+								sample = (short) clamped;
+							}
+
+							// Apply low-pass filter
+							if (lpfCoeffs != null) {
+								double x = sample;
+								double y = lpfCoeffs[0]*x + lpfCoeffs[1]*lpfX1 + lpfCoeffs[2]*lpfX2 - lpfCoeffs[3]*lpfY1 - lpfCoeffs[4]*lpfY2;
+								lpfX2 = lpfX1; lpfX1 = x;
+								lpfY2 = lpfY1; lpfY1 = y;
+								int clamped = (int) Math.round(y);
+								if (clamped > Short.MAX_VALUE) clamped = Short.MAX_VALUE;
+								if (clamped < Short.MIN_VALUE) clamped = Short.MIN_VALUE;
+								sample = (short) clamped;
+							}
+
+							// Write back the processed sample
+							data[i] = (byte) (sample & 0xff);
+							data[i+1] = (byte) ((sample >> 8) & 0xff);
 
 							sum += Math.abs(sample);
 							shortBuffer.clear();
@@ -301,10 +399,8 @@ public class WavRecorder implements RecorderContract.Recorder {
 						}
 					}
 				} else {
-					// Pause monitoring when recording is paused
-					if (monitoringEnabled && audioMonitor.isMonitoring() && !audioMonitor.isPaused()) {
-						audioMonitor.pause();
-					}
+							// Monitoring during pause is handled by standalone mode
+					// (started in pauseRecording), nothing to do here
 				}
 			}
 
@@ -412,7 +508,9 @@ public class WavRecorder implements RecorderContract.Recorder {
 		handler.postDelayed(() -> {
 			if (recorderCallback != null && recorder != null) {
 				long curTime = System.currentTimeMillis();
-				durationMills += curTime - updateTime;
+				if (updateTime > 0) {
+					durationMills += curTime - updateTime;
+				}
 				updateTime = curTime;
 				recorderCallback.onRecordProgress(durationMills, lastVal);
 				scheduleRecordingTimeUpdate();
@@ -428,6 +526,10 @@ public class WavRecorder implements RecorderContract.Recorder {
 	private void pauseRecordingTimer() {
 		handler.removeCallbacksAndMessages(null);
 		updateTime = 0;
+	}
+
+	public void setGainBoostLevel(int level) {
+		this.gainBoostLevel = level;
 	}
 
 	private float getGainMultiplier() {
@@ -458,5 +560,92 @@ public class WavRecorder implements RecorderContract.Recorder {
 
 	public boolean isMonitoringEnabled() {
 		return monitoringEnabled;
+	}
+
+	public void setNoiseReductionEnabled(boolean enabled) {
+		this.noiseReductionEnabled = enabled;
+	}
+
+	public boolean isNoiseReductionEnabled() {
+		return noiseReductionEnabled;
+	}
+
+	public void setHpfMode(int mode) {
+		this.hpfMode = mode;
+	}
+
+	public int getHpfMode() {
+		return hpfMode;
+	}
+
+	public void setLpfMode(int mode) {
+		this.lpfMode = mode;
+	}
+
+	public int getLpfMode() {
+		return lpfMode;
+	}
+
+	private void initFilters() {
+		hpfX1 = hpfX2 = hpfY1 = hpfY2 = 0;
+		lpfX1 = lpfX2 = lpfY1 = lpfY2 = 0;
+		hpfCoeffs = computeHpfCoeffs();
+		lpfCoeffs = computeLpfCoeffs();
+	}
+
+	private double[] computeHpfCoeffs() {
+		float freq;
+		switch (hpfMode) {
+			case AppConstants.HPF_80: freq = AppConstants.HPF_FREQ_80; break;
+			case AppConstants.HPF_120: freq = AppConstants.HPF_FREQ_120; break;
+			default: return null;
+		}
+		return biquadHighPass(freq, sampleRate, 0.7071);
+	}
+
+	private double[] computeLpfCoeffs() {
+		float freq;
+		switch (lpfMode) {
+			case AppConstants.LPF_9500: freq = AppConstants.LPF_FREQ_9500; break;
+			case AppConstants.LPF_15000: freq = AppConstants.LPF_FREQ_15000; break;
+			default: return null;
+		}
+		return biquadLowPass(freq, sampleRate, 0.7071);
+	}
+
+	private static double[] biquadHighPass(double fc, double fs, double Q) {
+		double w0 = 2.0 * Math.PI * fc / fs;
+		double alpha = Math.sin(w0) / (2.0 * Q);
+		double cosw0 = Math.cos(w0);
+		double b0 = (1.0 + cosw0) / 2.0;
+		double b1 = -(1.0 + cosw0);
+		double b2 = (1.0 + cosw0) / 2.0;
+		double a0 = 1.0 + alpha;
+		double a1 = -2.0 * cosw0;
+		double a2 = 1.0 - alpha;
+		return new double[]{b0/a0, b1/a0, b2/a0, a1/a0, a2/a0};
+	}
+
+	private static double[] biquadLowPass(double fc, double fs, double Q) {
+		double w0 = 2.0 * Math.PI * fc / fs;
+		double alpha = Math.sin(w0) / (2.0 * Q);
+		double cosw0 = Math.cos(w0);
+		double b0 = (1.0 - cosw0) / 2.0;
+		double b1 = 1.0 - cosw0;
+		double b2 = (1.0 - cosw0) / 2.0;
+		double a0 = 1.0 + alpha;
+		double a1 = -2.0 * cosw0;
+		double a2 = 1.0 - alpha;
+		return new double[]{b0/a0, b1/a0, b2/a0, a1/a0, a2/a0};
+	}
+
+	public void setNoiseReductionListener(NoiseReductionListener listener) {
+		this.noiseReductionListener = listener;
+	}
+
+	public interface NoiseReductionListener {
+		void onNoiseReductionStart();
+		void onNoiseReductionProgress(int percent);
+		void onNoiseReductionEnd(boolean success);
 	}
 }

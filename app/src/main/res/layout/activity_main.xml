@@ -41,19 +41,65 @@
 				android:padding="@dimen/spacing_normal"
 				android:src="@drawable/ic_import"/>
 
-		<TextView
-				android:layout_width="0dp"
+		<ImageButton
+				android:id="@+id/btn_monitor"
+				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
-				android:layout_weight="1"
-				android:gravity="center_horizontal"
-				android:layout_marginStart="@dimen/spacing_double"
-				android:layout_marginEnd="@dimen/spacing_double"
-				android:layout_marginTop="@dimen/spacing_medium"
-				android:layout_marginBottom="@dimen/spacing_normal"
-				android:textColor="@color/text_primary_light"
-				android:textSize="@dimen/text_xlarge"
-				android:fontFamily="sans-serif-medium"
-				android:text="@string/app_name"/>
+				android:contentDescription="@string/monitor"
+				android:layout_gravity="start"
+				android:background="?android:selectableItemBackgroundBorderless"
+				android:padding="@dimen/spacing_normal"
+				android:alpha="0.5"
+				android:src="@drawable/ic_headset"/>
+
+		<ImageButton
+				android:id="@+id/btn_hpf"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:contentDescription="@string/hpf"
+				android:layout_gravity="start"
+				android:background="?android:selectableItemBackgroundBorderless"
+				android:padding="@dimen/spacing_normal"
+				android:alpha="0.5"
+				android:src="@drawable/ic_hpf"/>
+
+		<ImageButton
+				android:id="@+id/btn_lpf"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:contentDescription="@string/lpf"
+				android:layout_gravity="start"
+				android:background="?android:selectableItemBackgroundBorderless"
+				android:padding="@dimen/spacing_normal"
+				android:alpha="0.5"
+				android:src="@drawable/ic_lpf"/>
+
+		<ImageButton
+				android:id="@+id/btn_noise_gate"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:contentDescription="@string/noise_gate"
+				android:layout_gravity="start"
+				android:background="?android:selectableItemBackgroundBorderless"
+				android:padding="@dimen/spacing_normal"
+				android:alpha="0.5"
+				android:src="@drawable/ic_noise_gate"/>
+
+		<ImageButton
+				android:id="@+id/btn_mic_boost"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:contentDescription="@string/mic_boost"
+				android:layout_gravity="start"
+				android:background="?android:selectableItemBackgroundBorderless"
+				android:padding="@dimen/spacing_normal"
+				android:alpha="0.5"
+				android:src="@drawable/ic_mic_boost"/>
+
+		<View
+				android:layout_width="0dp"
+				android:layout_height="0dp"
+				android:layout_weight="1"/>
 
 		<ImageButton
 				android:id="@+id/btn_share"
@@ -302,21 +348,6 @@
 					android:focusable="true"
 					android:scaleType="centerInside"
 					android:src="@drawable/ic_settings"/>
-
-			<ImageButton
-					android:id="@+id/btn_monitor"
-					android:layout_width="@dimen/bottom_pnl_btn_size"
-					android:layout_height="@dimen/bottom_pnl_btn_size"
-					android:layout_marginTop="@dimen/spacing_small"
-					android:layout_marginStart="-30dp"
-					android:adjustViewBounds="true"
-					android:background="?android:selectableItemBackgroundBorderless"
-					android:clickable="true"
-					android:contentDescription="@string/monitor"
-					android:focusable="true"
-					android:scaleType="centerInside"
-					android:alpha="0.5"
-					android:src="@drawable/ic_headset"/>
 
 		</LinearLayout>
 

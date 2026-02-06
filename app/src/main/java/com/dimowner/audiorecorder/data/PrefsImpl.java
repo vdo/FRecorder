@@ -58,6 +58,12 @@ public class PrefsImpl implements Prefs {
 	private static final String PREF_KEY_SETTING_CHANNEL_COUNT = "setting_channel_count";
 	private static final String PREF_KEY_SETTING_AUDIO_SOURCE = "setting_audio_source";
 	private static final String PREF_KEY_GAIN_BOOST_LEVEL = "gain_boost_level";
+	private static final String PREF_KEY_NOISE_REDUCTION_ENABLED = "noise_reduction_enabled";
+	private static final String PREF_KEY_HPF_MODE = "hpf_mode";
+	private static final String PREF_KEY_LPF_MODE = "lpf_mode";
+	private static final String PREF_KEY_NOISE_GATE_ENABLED = "noise_gate_enabled";
+	private static final String PREF_KEY_SETTING_OUTPUT_FORMAT = "setting_output_format";
+	private static final String PREF_KEY_SETTING_BIT_DEPTH = "setting_bit_depth";
 
 	private final SharedPreferences sharedPreferences;
 
@@ -279,17 +285,8 @@ public class PrefsImpl implements Prefs {
 				colorKey = AppConstants.DEFAULT_THEME_COLOR;
 		}
 
-		String recordingFormatKey;
-		switch (recordingFormat) {
-			case AppConstants.RECORDING_FORMAT_WAV:
-				recordingFormatKey = AppConstants.FORMAT_WAV;
-				break;
-			case AppConstants.RECORDING_FORMAT_M4A:
-				recordingFormatKey = AppConstants.FORMAT_M4A;
-				break;
-			default:
-				recordingFormatKey = AppConstants.DEFAULT_RECORDING_FORMAT;
-		}
+		// All old formats (m4a, 3gp) migrate to WAV since they are no longer supported
+		String recordingFormatKey = AppConstants.FORMAT_WAV;
 		String namingFormatKey;
 		switch (nameFormat) {
 			case AppConstants.NAMING_DATE:
@@ -358,7 +355,13 @@ public class PrefsImpl implements Prefs {
 
 	@Override
 	public String getSettingRecordingFormat() {
-		return sharedPreferences.getString(PREF_KEY_SETTING_RECORDING_FORMAT, AppConstants.DEFAULT_RECORDING_FORMAT);
+		String format = sharedPreferences.getString(PREF_KEY_SETTING_RECORDING_FORMAT, AppConstants.DEFAULT_RECORDING_FORMAT);
+		// Force WAV if an old unsupported format (m4a, 3gp) is stored
+		if (!AppConstants.FORMAT_WAV.equals(format)) {
+			setSettingRecordingFormat(AppConstants.FORMAT_WAV);
+			return AppConstants.FORMAT_WAV;
+		}
+		return format;
 	}
 
 	@Override
@@ -398,6 +401,30 @@ public class PrefsImpl implements Prefs {
 	}
 
 	@Override
+	public void setSettingOutputFormat(String outputFormat) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putString(PREF_KEY_SETTING_OUTPUT_FORMAT, outputFormat);
+		editor.apply();
+	}
+
+	@Override
+	public String getSettingOutputFormat() {
+		return sharedPreferences.getString(PREF_KEY_SETTING_OUTPUT_FORMAT, AppConstants.DEFAULT_OUTPUT_FORMAT);
+	}
+
+	@Override
+	public void setSettingBitDepth(int bitDepth) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putInt(PREF_KEY_SETTING_BIT_DEPTH, bitDepth);
+		editor.apply();
+	}
+
+	@Override
+	public int getSettingBitDepth() {
+		return sharedPreferences.getInt(PREF_KEY_SETTING_BIT_DEPTH, AppConstants.DEFAULT_BIT_DEPTH);
+	}
+
+	@Override
 	public void setSettingAudioSource(int deviceId) {
 		SharedPreferences.Editor editor = sharedPreferences.edit();
 		editor.putInt(PREF_KEY_SETTING_AUDIO_SOURCE, deviceId);
@@ -422,6 +449,54 @@ public class PrefsImpl implements Prefs {
 	}
 
 	@Override
+	public void setNoiseReductionEnabled(boolean enabled) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putBoolean(PREF_KEY_NOISE_REDUCTION_ENABLED, enabled);
+		editor.apply();
+	}
+
+	@Override
+	public boolean isNoiseReductionEnabled() {
+		return sharedPreferences.getBoolean(PREF_KEY_NOISE_REDUCTION_ENABLED, AppConstants.DEFAULT_NOISE_REDUCTION_ENABLED);
+	}
+
+	@Override
+	public void setHpfMode(int mode) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putInt(PREF_KEY_HPF_MODE, mode);
+		editor.apply();
+	}
+
+	@Override
+	public int getHpfMode() {
+		return sharedPreferences.getInt(PREF_KEY_HPF_MODE, AppConstants.DEFAULT_HPF_MODE);
+	}
+
+	@Override
+	public void setLpfMode(int mode) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putInt(PREF_KEY_LPF_MODE, mode);
+		editor.apply();
+	}
+
+	@Override
+	public int getLpfMode() {
+		return sharedPreferences.getInt(PREF_KEY_LPF_MODE, AppConstants.DEFAULT_LPF_MODE);
+	}
+
+	@Override
+	public void setNoiseGateEnabled(boolean enabled) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putBoolean(PREF_KEY_NOISE_GATE_ENABLED, enabled);
+		editor.apply();
+	}
+
+	@Override
+	public boolean isNoiseGateEnabled() {
+		return sharedPreferences.getBoolean(PREF_KEY_NOISE_GATE_ENABLED, AppConstants.DEFAULT_NOISE_GATE_ENABLED);
+	}
+
+	@Override
 	public void resetSettings() {
 		SharedPreferences.Editor editor = sharedPreferences.edit();
 //		editor.putString(PREF_KEY_SETTING_THEME_COLOR, AppConstants.DEFAULT_THEME_COLOR);
@@ -432,6 +507,12 @@ public class PrefsImpl implements Prefs {
 		editor.putInt(PREF_KEY_SETTING_CHANNEL_COUNT, AppConstants.DEFAULT_CHANNEL_COUNT);
 		editor.putInt(PREF_KEY_SETTING_AUDIO_SOURCE, AppConstants.DEFAULT_AUDIO_SOURCE);
 		editor.putInt(PREF_KEY_GAIN_BOOST_LEVEL, AppConstants.DEFAULT_GAIN_BOOST_LEVEL);
+		editor.putBoolean(PREF_KEY_NOISE_REDUCTION_ENABLED, AppConstants.DEFAULT_NOISE_REDUCTION_ENABLED);
+		editor.putInt(PREF_KEY_HPF_MODE, AppConstants.DEFAULT_HPF_MODE);
+		editor.putInt(PREF_KEY_LPF_MODE, AppConstants.DEFAULT_LPF_MODE);
+		editor.putBoolean(PREF_KEY_NOISE_GATE_ENABLED, AppConstants.DEFAULT_NOISE_GATE_ENABLED);
+		editor.putString(PREF_KEY_SETTING_OUTPUT_FORMAT, AppConstants.DEFAULT_OUTPUT_FORMAT);
+		editor.putInt(PREF_KEY_SETTING_BIT_DEPTH, AppConstants.DEFAULT_BIT_DEPTH);
 		editor.apply();
 	}
 }

@@ -21,7 +21,9 @@ import android.media.AudioAttributes;
 import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
 import android.media.AudioManager;
+import android.media.AudioRecord;
 import android.media.AudioTrack;
+import android.media.MediaRecorder;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,15 +41,42 @@ import timber.log.Timber;
 public class AudioMonitor {
 
     private AudioTrack audioTrack;
+    private AudioRecord standaloneRecorder;
+    private Thread standaloneThread;
     private final AtomicBoolean isMonitoring = new AtomicBoolean(false);
+    private final AtomicBoolean isStandalone = new AtomicBoolean(false);
     private final AtomicBoolean isPaused = new AtomicBoolean(false);
     private final AtomicInteger feedCount = new AtomicInteger(0);
     private final AtomicInteger writeCount = new AtomicInteger(0);
 
     private int sampleRate = 44100;
     private int channelCount = 1;
+    private AudioDeviceInfo inputDevice = null;
     private String lastError = null;
     private Context appContext = null;
+
+    // Noise gate state
+    private enum GateState { CLOSED, ATTACK, OPEN, HOLD, RELEASE }
+    private volatile boolean noiseGateEnabled = false;
+    private GateState gateState = GateState.CLOSED;
+    private float gateEnvelope = 0f;
+    private long holdCounter = 0;
+    private float attackCoeff;
+    private float releaseCoeff;
+    private long holdSamples;
+    private int gateThreshold;
+    private int gateHysteresis;
+
+    // Biquad filter state for monitor path
+    private volatile int hpfMode = com.dimowner.audiorecorder.AppConstants.HPF_OFF;
+    private volatile int lpfMode = com.dimowner.audiorecorder.AppConstants.LPF_OFF;
+    private double hpfX1, hpfX2, hpfY1, hpfY2;
+    private double lpfX1, lpfX2, lpfY1, lpfY2;
+    private double[] hpfCoeffs = null;
+    private double[] lpfCoeffs = null;
+
+    // Gain boost for monitor path
+    private volatile int gainBoostLevel = com.dimowner.audiorecorder.AppConstants.GAIN_BOOST_OFF;
 
     private static class AudioMonitorSingletonHolder {
         private static final AudioMonitor singleton = new AudioMonitor();
@@ -66,7 +95,209 @@ public class AudioMonitor {
         this.sampleRate = sampleRate;
         this.channelCount = channelCount;
         this.lastError = null;
+        initNoiseGate();
+        initFilters();
         Timber.d("AudioMonitor.initialize: sampleRate=%d, channels=%d", sampleRate, channelCount);
+    }
+
+    private void initFilters() {
+        hpfX1 = hpfX2 = hpfY1 = hpfY2 = 0;
+        lpfX1 = lpfX2 = lpfY1 = lpfY2 = 0;
+        hpfCoeffs = computeHpfCoeffs();
+        lpfCoeffs = computeLpfCoeffs();
+    }
+
+    public void setHpfMode(int mode) {
+        this.hpfMode = mode;
+        initFilters();
+    }
+
+    public void setLpfMode(int mode) {
+        this.lpfMode = mode;
+        initFilters();
+    }
+
+    public int getHpfMode() { return hpfMode; }
+    public int getLpfMode() { return lpfMode; }
+
+    public void setGainBoostLevel(int level) {
+        this.gainBoostLevel = level;
+    }
+
+    public int getGainBoostLevel() { return gainBoostLevel; }
+
+    private float getGainMultiplier() {
+        switch (gainBoostLevel) {
+            case com.dimowner.audiorecorder.AppConstants.GAIN_BOOST_6DB:
+                return com.dimowner.audiorecorder.AppConstants.GAIN_BOOST_MULTIPLIER_6DB;
+            case com.dimowner.audiorecorder.AppConstants.GAIN_BOOST_12DB:
+                return com.dimowner.audiorecorder.AppConstants.GAIN_BOOST_MULTIPLIER_12DB;
+            default:
+                return 1.0f;
+        }
+    }
+
+    private void applyGainBoost(byte[] pcmData, int length) {
+        float multiplier = getGainMultiplier();
+        if (multiplier <= 1.0f) return;
+        for (int i = 0; i < length; i += 2) {
+            short sample = (short) ((pcmData[i] & 0xFF) | (pcmData[i + 1] << 8));
+            int amplified = (int) (sample * multiplier);
+            if (amplified > Short.MAX_VALUE) amplified = Short.MAX_VALUE;
+            if (amplified < Short.MIN_VALUE) amplified = Short.MIN_VALUE;
+            pcmData[i] = (byte) (amplified & 0xFF);
+            pcmData[i + 1] = (byte) ((amplified >> 8) & 0xFF);
+        }
+    }
+
+    private double[] computeHpfCoeffs() {
+        float freq;
+        switch (hpfMode) {
+            case com.dimowner.audiorecorder.AppConstants.HPF_80: freq = com.dimowner.audiorecorder.AppConstants.HPF_FREQ_80; break;
+            case com.dimowner.audiorecorder.AppConstants.HPF_120: freq = com.dimowner.audiorecorder.AppConstants.HPF_FREQ_120; break;
+            default: return null;
+        }
+        return biquadHighPass(freq, sampleRate, 0.7071);
+    }
+
+    private double[] computeLpfCoeffs() {
+        float freq;
+        switch (lpfMode) {
+            case com.dimowner.audiorecorder.AppConstants.LPF_9500: freq = com.dimowner.audiorecorder.AppConstants.LPF_FREQ_9500; break;
+            case com.dimowner.audiorecorder.AppConstants.LPF_15000: freq = com.dimowner.audiorecorder.AppConstants.LPF_FREQ_15000; break;
+            default: return null;
+        }
+        return biquadLowPass(freq, sampleRate, 0.7071);
+    }
+
+    private static double[] biquadHighPass(double fc, double fs, double Q) {
+        double w0 = 2.0 * Math.PI * fc / fs;
+        double alpha = Math.sin(w0) / (2.0 * Q);
+        double cosw0 = Math.cos(w0);
+        double b0 = (1.0 + cosw0) / 2.0;
+        double b1 = -(1.0 + cosw0);
+        double b2 = (1.0 + cosw0) / 2.0;
+        double a0 = 1.0 + alpha;
+        double a1 = -2.0 * cosw0;
+        double a2 = 1.0 - alpha;
+        return new double[]{b0/a0, b1/a0, b2/a0, a1/a0, a2/a0};
+    }
+
+    private static double[] biquadLowPass(double fc, double fs, double Q) {
+        double w0 = 2.0 * Math.PI * fc / fs;
+        double alpha = Math.sin(w0) / (2.0 * Q);
+        double cosw0 = Math.cos(w0);
+        double b0 = (1.0 - cosw0) / 2.0;
+        double b1 = 1.0 - cosw0;
+        double b2 = (1.0 - cosw0) / 2.0;
+        double a0 = 1.0 + alpha;
+        double a1 = -2.0 * cosw0;
+        double a2 = 1.0 - alpha;
+        return new double[]{b0/a0, b1/a0, b2/a0, a1/a0, a2/a0};
+    }
+
+    private void applyFilters(byte[] pcmData, int length) {
+        for (int i = 0; i < length; i += 2) {
+            short sample = (short) ((pcmData[i] & 0xFF) | (pcmData[i + 1] << 8));
+
+            if (hpfCoeffs != null) {
+                double x = sample;
+                double y = hpfCoeffs[0]*x + hpfCoeffs[1]*hpfX1 + hpfCoeffs[2]*hpfX2 - hpfCoeffs[3]*hpfY1 - hpfCoeffs[4]*hpfY2;
+                hpfX2 = hpfX1; hpfX1 = x;
+                hpfY2 = hpfY1; hpfY1 = y;
+                int clamped = (int) Math.round(y);
+                if (clamped > Short.MAX_VALUE) clamped = Short.MAX_VALUE;
+                if (clamped < Short.MIN_VALUE) clamped = Short.MIN_VALUE;
+                sample = (short) clamped;
+            }
+
+            if (lpfCoeffs != null) {
+                double x = sample;
+                double y = lpfCoeffs[0]*x + lpfCoeffs[1]*lpfX1 + lpfCoeffs[2]*lpfX2 - lpfCoeffs[3]*lpfY1 - lpfCoeffs[4]*lpfY2;
+                lpfX2 = lpfX1; lpfX1 = x;
+                lpfY2 = lpfY1; lpfY1 = y;
+                int clamped = (int) Math.round(y);
+                if (clamped > Short.MAX_VALUE) clamped = Short.MAX_VALUE;
+                if (clamped < Short.MIN_VALUE) clamped = Short.MIN_VALUE;
+                sample = (short) clamped;
+            }
+
+            pcmData[i] = (byte) (sample & 0xFF);
+            pcmData[i + 1] = (byte) ((sample >> 8) & 0xFF);
+        }
+    }
+
+    private void initNoiseGate() {
+        gateState = GateState.CLOSED;
+        gateEnvelope = 0f;
+        holdCounter = 0;
+        gateThreshold = com.dimowner.audiorecorder.AppConstants.NOISE_GATE_THRESHOLD_RMS;
+        gateHysteresis = (int) (gateThreshold * com.dimowner.audiorecorder.AppConstants.NOISE_GATE_HYSTERESIS);
+        float attackMs = com.dimowner.audiorecorder.AppConstants.NOISE_GATE_ATTACK_MS;
+        float releaseMs = com.dimowner.audiorecorder.AppConstants.NOISE_GATE_RELEASE_MS;
+        float holdMs = com.dimowner.audiorecorder.AppConstants.NOISE_GATE_HOLD_MS;
+        // Coefficients are per-chunk approximation: assume ~40ms chunks
+        // attackCoeff = 1.0 / (sampleRate * attackMs / 1000)
+        attackCoeff = 1000.0f / (sampleRate * attackMs);
+        releaseCoeff = 1000.0f / (sampleRate * releaseMs);
+        holdSamples = (long) (sampleRate * holdMs / 1000.0f);
+    }
+
+    public void setNoiseGateEnabled(boolean enabled) {
+        this.noiseGateEnabled = enabled;
+        if (!enabled) {
+            gateState = GateState.OPEN;
+            gateEnvelope = 1.0f;
+        }
+    }
+
+    public boolean isNoiseGateEnabled() {
+        return noiseGateEnabled;
+    }
+
+    private void processNoiseGate(byte[] pcmData, int length) {
+        // 1. Compute RMS of chunk
+        long sumSquares = 0;
+        int sampleCount = length / 2;
+        for (int i = 0; i < length; i += 2) {
+            short sample = (short) ((pcmData[i] & 0xFF) | (pcmData[i + 1] << 8));
+            sumSquares += (long) sample * sample;
+        }
+        float rms = (float) Math.sqrt((double) sumSquares / sampleCount);
+
+        // 2. Update state machine
+        switch (gateState) {
+            case CLOSED:
+                if (rms > gateThreshold) gateState = GateState.ATTACK;
+                break;
+            case ATTACK:
+                gateEnvelope += attackCoeff * sampleCount;
+                if (gateEnvelope >= 1.0f) { gateEnvelope = 1.0f; gateState = GateState.OPEN; }
+                break;
+            case OPEN:
+                if (rms < gateHysteresis) { holdCounter = holdSamples; gateState = GateState.HOLD; }
+                break;
+            case HOLD:
+                holdCounter -= sampleCount;
+                if (holdCounter <= 0) gateState = GateState.RELEASE;
+                if (rms > gateThreshold) gateState = GateState.OPEN;
+                break;
+            case RELEASE:
+                gateEnvelope -= releaseCoeff * sampleCount;
+                if (gateEnvelope <= 0f) { gateEnvelope = 0f; gateState = GateState.CLOSED; }
+                if (rms > gateThreshold) gateState = GateState.ATTACK;
+                break;
+        }
+
+        // 3. Apply envelope to samples (only when not fully open)
+        if (gateEnvelope < 1.0f) {
+            for (int i = 0; i < length; i += 2) {
+                short sample = (short) ((pcmData[i] & 0xFF) | (pcmData[i + 1] << 8));
+                sample = (short) (sample * gateEnvelope);
+                pcmData[i] = (byte) (sample & 0xFF);
+                pcmData[i + 1] = (byte) ((sample >> 8) & 0xFF);
+            }
+        }
     }
 
     public void setContext(Context context) {
@@ -213,6 +444,18 @@ public class AudioMonitor {
             return;
         }
 
+        // Only apply gain/filters in standalone mode; during recording, WavRecorder already processes before feeding
+        if (isStandalone.get()) {
+            applyGainBoost(pcmData, pcmData.length);
+            if (hpfCoeffs != null || lpfCoeffs != null) {
+                applyFilters(pcmData, pcmData.length);
+            }
+        }
+
+        if (noiseGateEnabled) {
+            processNoiseGate(pcmData, pcmData.length);
+        }
+
         feedCount.incrementAndGet();
         try {
             int written = audioTrack.write(pcmData, 0, pcmData.length, AudioTrack.WRITE_NON_BLOCKING);
@@ -307,7 +550,122 @@ public class AudioMonitor {
         return isPaused.get();
     }
 
+    /**
+     * Start standalone monitoring (no recording).
+     * Creates its own AudioRecord and reads audio in a loop, feeding it to AudioTrack.
+     * Call stopStandalone() before starting a recording, then resume after.
+     */
+    @android.annotation.SuppressLint("MissingPermission")
+    public void startStandalone(int sampleRate, int channelCount, AudioDeviceInfo inputDevice) {
+        if (isMonitoring.get()) {
+            Timber.w("AudioMonitor.startStandalone: already monitoring");
+            return;
+        }
+
+        this.inputDevice = inputDevice;
+        initialize(sampleRate, channelCount);
+        start();
+
+        if (!isMonitoring.get()) {
+            Timber.e("AudioMonitor.startStandalone: AudioTrack failed to start");
+            return;
+        }
+
+        int channelIn = channelCount == 1 ?
+            AudioFormat.CHANNEL_IN_MONO : AudioFormat.CHANNEL_IN_STEREO;
+        int bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelIn, AudioFormat.ENCODING_PCM_16BIT);
+        if (bufferSize <= 0) {
+            lastError = "Standalone AudioRecord minBuf error: " + bufferSize;
+            Timber.e(lastError);
+            stop();
+            return;
+        }
+
+        try {
+            standaloneRecorder = new AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                sampleRate, channelIn,
+                AudioFormat.ENCODING_PCM_16BIT, bufferSize);
+
+            if (inputDevice != null) {
+                standaloneRecorder.setPreferredDevice(inputDevice);
+            }
+
+            if (standaloneRecorder.getState() != AudioRecord.STATE_INITIALIZED) {
+                lastError = "Standalone AudioRecord init failed";
+                Timber.e(lastError);
+                standaloneRecorder.release();
+                standaloneRecorder = null;
+                stop();
+                return;
+            }
+
+            standaloneRecorder.startRecording();
+            isStandalone.set(true);
+
+            final int readSize = bufferSize;
+            standaloneThread = new Thread(() -> {
+                byte[] buffer = new byte[readSize];
+                while (isStandalone.get() && isMonitoring.get()) {
+                    if (!isPaused.get()) {
+                        int read = standaloneRecorder.read(buffer, 0, readSize);
+                        if (read > 0) {
+                            feedAudio(buffer.clone());
+                        }
+                    } else {
+                        try { Thread.sleep(10); } catch (InterruptedException ignored) {}
+                    }
+                }
+            }, "AudioMonitor-Standalone");
+            standaloneThread.start();
+
+            Timber.d("Standalone monitoring started: sr=%d ch=%d device=%s",
+                    sampleRate, channelCount,
+                    inputDevice != null ? inputDevice.getProductName() : "default");
+        } catch (Exception e) {
+            lastError = "Standalone start error: " + e.getMessage();
+            Timber.e(e, lastError);
+            releaseStandaloneRecorder();
+            stop();
+        }
+    }
+
+    /**
+     * Stop standalone monitoring. Call this before starting a recording.
+     */
+    public void stopStandalone() {
+        isStandalone.set(false);
+        if (standaloneThread != null) {
+            try { standaloneThread.join(500); } catch (InterruptedException ignored) {}
+            standaloneThread = null;
+        }
+        releaseStandaloneRecorder();
+        stop();
+        Timber.d("Standalone monitoring stopped");
+    }
+
+    private void releaseStandaloneRecorder() {
+        if (standaloneRecorder != null) {
+            try {
+                standaloneRecorder.stop();
+                standaloneRecorder.release();
+            } catch (Exception e) {
+                Timber.e(e, "Error releasing standalone AudioRecord");
+            }
+            standaloneRecorder = null;
+        }
+    }
+
+    public boolean isStandalone() {
+        return isStandalone.get();
+    }
+
+    public AudioDeviceInfo getInputDevice() {
+        return inputDevice;
+    }
+
     public void release() {
+        stopStandalone();
         stop();
     }
 

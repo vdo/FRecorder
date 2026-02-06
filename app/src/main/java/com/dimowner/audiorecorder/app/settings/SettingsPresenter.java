@@ -125,6 +125,8 @@ public class SettingsPresenter implements SettingsContract.UserActionsListener {
 			view.showNamingFormat(prefs.getSettingNamingFormat());
 			view.showRecordingBitrate(prefs.getSettingBitrate());
 			view.showRecordingSampleRate(prefs.getSettingSampleRate());
+			view.showOutputFormat(prefs.getSettingOutputFormat());
+			view.showBitDepth(prefs.getSettingBitDepth());
 			//This is needed for scoped storage support
 			view.showDirectorySetting(prefs.isShowDirectorySetting());
 
@@ -133,6 +135,9 @@ public class SettingsPresenter implements SettingsContract.UserActionsListener {
 
 			// Load gain boost setting
 			view.showGainBoostLevel(prefs.getGainBoostLevel());
+
+			// Load noise reduction setting
+			view.showNoiseReductionEnabled(prefs.isNoiseReductionEnabled());
 		}
 	}
 
@@ -216,6 +221,16 @@ public class SettingsPresenter implements SettingsContract.UserActionsListener {
 	}
 
 	@Override
+	public void setSettingOutputFormat(String outputFormatKey) {
+		prefs.setSettingOutputFormat(outputFormatKey);
+	}
+
+	@Override
+	public void setSettingBitDepth(int bitDepth) {
+		prefs.setSettingBitDepth(bitDepth);
+	}
+
+	@Override
 	public void setSettingAudioSource(int deviceId) {
 		prefs.setSettingAudioSource(deviceId);
 	}
@@ -223,6 +238,11 @@ public class SettingsPresenter implements SettingsContract.UserActionsListener {
 	@Override
 	public void setGainBoostLevel(int level) {
 		prefs.setGainBoostLevel(level);
+	}
+
+	@Override
+	public void setNoiseReductionEnabled(boolean enabled) {
+		prefs.setNoiseReductionEnabled(enabled);
 	}
 
 	@Override
@@ -322,83 +342,29 @@ public class SettingsPresenter implements SettingsContract.UserActionsListener {
 		final long space = FileUtil.getFree(fileRepository.getRecordingDir());
 		String format = prefs.getSettingRecordingFormat();
 		int sampleRate = prefs.getSettingSampleRate();
-		if (format.equals(AppConstants.FORMAT_3GP)) {
-			if (view != null) {
-				view.showAvailableSpace(
-						TimeUtils.formatTimeIntervalHourMinSec(
-								spaceToTimeSecs(space, format, sampleRate,
-										AppConstants.RECORD_ENCODING_BITRATE_12000, AppConstants.RECORD_AUDIO_MONO)
-						)
-				);
-				view.showSizePerMin(
-						decimalFormat.format(
-								sizePerMin(format, sampleRate, AppConstants.RECORD_ENCODING_BITRATE_12000,
-										AppConstants.RECORD_AUDIO_MONO) / 1000000f
-						)
-				);
-				view.showInformation(settingsMapper.convertFormatsToString(format) + AppConstants.SEPARATOR
-						+ settingsMapper.convertSampleRateToString(sampleRate) + AppConstants.SEPARATOR
-						+ settingsMapper.formatBitrate(AppConstants.RECORD_ENCODING_BITRATE_12000 / 1000) + AppConstants.SEPARATOR
-						+ settingsMapper.convertChannelsToString(AppConstants.RECORD_AUDIO_MONO));
-			}
-		} else {
-			int bitrate = prefs.getSettingBitrate();
-			int channelsCount = prefs.getSettingChannelCount();
-			final long time = spaceToTimeSecs(space, format, sampleRate, bitrate, channelsCount);
-			if (view != null) {
-				view.showAvailableSpace(TimeUtils.formatTimeIntervalHourMinSec(time));
-				view.showSizePerMin(decimalFormat.format(sizePerMin(format, sampleRate, bitrate, channelsCount) / 1000000f));
-				switch (format) {
-					default:
-					case AppConstants.FORMAT_M4A:
-						view.showInformation(settingsMapper.convertFormatsToString(format) + AppConstants.SEPARATOR
-								+ settingsMapper.convertSampleRateToString(sampleRate) + AppConstants.SEPARATOR
-								+ settingsMapper.convertBitratesToString(bitrate) + AppConstants.SEPARATOR
-								+ settingsMapper.convertChannelsToString(channelsCount));
-						break;
-					case AppConstants.FORMAT_WAV:
-						view.showInformation(settingsMapper.convertFormatsToString(format) + AppConstants.SEPARATOR
-								+ settingsMapper.convertSampleRateToString(sampleRate) + AppConstants.SEPARATOR
-								+ settingsMapper.convertChannelsToString(channelsCount));
-						break;
-				}
-			}
+		int channelsCount = prefs.getSettingChannelCount();
+		final long time = spaceToTimeSecs(space, format, sampleRate, 0, channelsCount);
+		if (view != null) {
+			view.showAvailableSpace(TimeUtils.formatTimeIntervalHourMinSec(time));
+			view.showSizePerMin(decimalFormat.format(sizePerMin(format, sampleRate, 0, channelsCount) / 1000000f));
+			view.showInformation(settingsMapper.convertFormatsToString(format) + AppConstants.SEPARATOR
+					+ settingsMapper.convertSampleRateToString(sampleRate) + AppConstants.SEPARATOR
+					+ settingsMapper.convertChannelsToString(channelsCount));
 		}
 	}
 
 	private long spaceToTimeSecs(long spaceBytes, String recordingFormat, int sampleRate, int bitrate, int channels) {
-		switch (recordingFormat) {
-			case AppConstants.FORMAT_M4A:
-			case AppConstants.FORMAT_3GP:
-				return 1000 * (spaceBytes/(bitrate/8));
-			case AppConstants.FORMAT_WAV:
-				return 1000 * (spaceBytes/((long) sampleRate * channels * 2));
-			default:
-				return 0;
-		}
+		// Recording is always WAV internally
+		return 1000 * (spaceBytes/((long) sampleRate * channels * 2));
 	}
 
 	private long sizePerMin(String recordingFormat, int sampleRate, int bitrate, int channels) {
-		switch (recordingFormat) {
-			case AppConstants.FORMAT_M4A:
-			case AppConstants.FORMAT_3GP:
-				return 60L * (bitrate/8);
-			case AppConstants.FORMAT_WAV:
-				return 60 * ((long) sampleRate * channels * 2);
-			default:
-				return 0;
-		}
+		// Recording is always WAV internally
+		return 60 * ((long) sampleRate * channels * 2);
 	}
 
 	private void updateRecordingFormat(String formatKey) {
-		switch (formatKey) {
-			case AppConstants.FORMAT_WAV:
-			case AppConstants.FORMAT_3GP:
-				view.hideBitrateSelector();
-				break;
-			case AppConstants.FORMAT_M4A:
-			default:
-				view.showBitrateSelector();
-		}
+		// WAV is the only recording format; bitrate selector is not needed
+		view.hideBitrateSelector();
 	}
 }

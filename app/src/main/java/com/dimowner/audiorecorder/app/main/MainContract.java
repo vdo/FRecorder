@@ -84,6 +84,8 @@ public interface MainContract {
 		void showMigratePublicStorageWarning();
 
 		void showRecordFileNotAvailable(String path);
+
+		void onMonitoringDisabled();
 	}
 
 	interface UserActionsListener extends Contract.UserActionsListener<MainContract.View> {

@@ -35,26 +35,38 @@ import com.dimowner.audiorecorder.app.main.MainActivity;
 import com.dimowner.audiorecorder.app.settings.AppSpinnerAdapter;
 import com.dimowner.audiorecorder.app.settings.SettingsMapper;
 import com.dimowner.audiorecorder.app.widget.SettingView;
+import com.dimowner.audiorecorder.audio.AudioDeviceManager;
 import com.dimowner.audiorecorder.util.AndroidUtils;
 import com.dimowner.audiorecorder.util.FileUtil;
+
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.media.AudioDeviceInfo;
+import android.widget.ArrayAdapter;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class SetupActivity extends Activity implements SetupContract.View, View.OnClickListener {
 
-	private Spinner nameFormatSelector;
+	private static final int REQ_CODE_RECORD_AUDIO = 501;
 
-	private SettingView formatSetting;
+	private Spinner nameFormatSelector;
+	private Spinner audioSourceSelector;
+
+	private SettingView outputFormatSetting;
+	private SettingView bitDepthSetting;
 	private SettingView sampleRateSetting;
 	private SettingView bitrateSetting;
 	private SettingView channelsSetting;
-	private TextView txtInformation;
-	private TextView txtSizePerMin;
 
 	private SetupContract.UserActionsListener presenter;
 	private ColorMap colorMap;
 	private ColorMap.OnThemeColorChangeListener onThemeColorChangeListener;
+
+	private List<AudioDeviceInfo> availableAudioDevices = new ArrayList<>();
+	private AudioDeviceManager audioDeviceManager;
+	private boolean ignoreAudioSourceSelection = false;
 
 	public static Intent getStartIntent(Context context) {
 		Intent intent = new Intent(context, SetupActivity.class);
@@ -76,9 +88,6 @@ public class SetupActivity extends Activity implements SetupContract.View, View.
 //		LinearLayout toolbar = findViewById(R.id.toolbar);
 //		toolbar.setPadding(0, AndroidUtils.getStatusBarHeight(getApplicationContext()), 0, 0);
 
-		txtInformation = findViewById(R.id.txt_information);
-		txtSizePerMin = findViewById(R.id.txt_size_per_min);
-
 		Button btnApply = findViewById(R.id.btn_apply);
 		Button btnReset = findViewById(R.id.btn_reset);
 		btnApply.setOnClickListener(this);
@@ -89,17 +98,28 @@ public class SetupActivity extends Activity implements SetupContract.View, View.
 //		params.height = AndroidUtils.getNavigationBarHeight(getApplicationContext());
 //		space.setLayoutParams(params);
 
-		formatSetting = findViewById(R.id.setting_recording_format);
-		final String[] formats = getResources().getStringArray(R.array.formats2);
-		final String[] formatsKeys = new String[] {
-				AppConstants.FORMAT_M4A,
-				AppConstants.FORMAT_WAV,
-				AppConstants.FORMAT_3GP
+		outputFormatSetting = findViewById(R.id.setting_output_format);
+		final String[] outputFormats = new String[] { "WAV", "MP3 320kbps", "FLAC" };
+		final String[] outputFormatKeys = new String[] {
+				AppConstants.OUTPUT_FORMAT_WAV,
+				AppConstants.OUTPUT_FORMAT_MP3,
+				AppConstants.OUTPUT_FORMAT_FLAC
 		};
-		formatSetting.setData(formats, formatsKeys);
-		formatSetting.setOnChipCheckListener((key, name, checked) -> presenter.setSettingRecordingFormat(key));
-		formatSetting.setTitle(R.string.recording_format);
-		formatSetting.setOnInfoClickListener(v -> AndroidUtils.showInfoDialog(SetupActivity.this, R.string.info_format));
+		outputFormatSetting.setData(outputFormats, outputFormatKeys);
+		outputFormatSetting.setOnChipCheckListener((key, name, checked) -> presenter.setSettingOutputFormat(key));
+		outputFormatSetting.setTitle(R.string.output_format);
+		outputFormatSetting.setOnInfoClickListener(v -> AndroidUtils.showInfoDialog(SetupActivity.this, R.string.info_output_format));
+
+		bitDepthSetting = findViewById(R.id.setting_bit_depth);
+		final String[] bitDepths = new String[] { "16-bit", "24-bit" };
+		final String[] bitDepthKeys = new String[] {
+				SettingsMapper.BIT_DEPTH_16_KEY,
+				SettingsMapper.BIT_DEPTH_24_KEY
+		};
+		bitDepthSetting.setData(bitDepths, bitDepthKeys);
+		bitDepthSetting.setOnChipCheckListener((key, name, checked) -> presenter.setSettingBitDepth(SettingsMapper.keyToBitDepth(key)));
+		bitDepthSetting.setTitle(R.string.bit_depth);
+		bitDepthSetting.setOnInfoClickListener(v -> AndroidUtils.showInfoDialog(SetupActivity.this, R.string.info_bit_depth));
 
 		sampleRateSetting = findViewById(R.id.setting_frequency);
 		final String[] sampleRates = getResources().getStringArray(R.array.sample_rates2);
@@ -144,9 +164,14 @@ public class SetupActivity extends Activity implements SetupContract.View, View.
 		channelsSetting.setOnInfoClickListener(v -> AndroidUtils.showInfoDialog(SetupActivity.this, R.string.info_channels));
 
 		presenter = ARApplication.getInjector().provideSetupPresenter(getApplicationContext());
+		audioDeviceManager = ARApplication.getInjector().provideAudioDeviceManager(getApplicationContext());
 
 		initThemeColorSelector();
 		initNameFormatSelector();
+		initAudioSourceSelector();
+
+		// Request recording permission during wizard setup
+		requestRecordingPermission();
 	}
 
 	private void initThemeColorSelector() {
@@ -185,11 +210,11 @@ public class SetupActivity extends Activity implements SetupContract.View, View.
 		nameFormatSelector = findViewById(R.id.name_format);
 		List<AppSpinnerAdapter.ThemeItem> items = new ArrayList<>();
 		String[] values = new String[5];
-		values[0] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameCounted(1) + ".m4a";
-		values[1] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameDateVariant() + ".m4a";
-		values[2] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameDateUS() + ".m4a";
-		values[3] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameDateISO8601() + ".m4a";
-		values[4] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameMills() + ".m4a";
+		values[0] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameCounted(1) + ".wav";
+		values[1] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameDateVariant() + ".wav";
+		values[2] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameDateUS() + ".wav";
+		values[3] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameDateISO8601() + ".wav";
+		values[4] = getResources().getString(R.string.naming) + " " + FileUtil.generateRecordNameMills() + ".wav";
 		for (int i = 0; i < values.length; i++) {
 			items.add(new AppSpinnerAdapter.ThemeItem(values[i],
 					getApplicationContext().getResources().getColor(colorMap.getPrimaryColorRes())));
@@ -204,6 +229,66 @@ public class SetupActivity extends Activity implements SetupContract.View, View.
 			}
 			@Override public void onNothingSelected(AdapterView<?> parent) { }
 		});
+	}
+
+	private void initAudioSourceSelector() {
+		audioSourceSelector = findViewById(R.id.setup_audio_source_selector);
+		if (audioSourceSelector == null) return;
+
+		audioSourceSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+			@Override
+			public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+				if (ignoreAudioSourceSelection) return;
+				int deviceId;
+				if (position == 0) {
+					deviceId = AppConstants.AUDIO_SOURCE_DEFAULT_MIC;
+				} else {
+					deviceId = availableAudioDevices.get(position - 1).getId();
+				}
+				presenter.setSettingAudioSource(deviceId);
+			}
+			@Override public void onNothingSelected(AdapterView<?> parent) { }
+		});
+		loadAudioDevices();
+	}
+
+	private void loadAudioDevices() {
+		if (audioSourceSelector == null || audioDeviceManager == null) return;
+
+		availableAudioDevices = audioDeviceManager.getAvailableInputDevices();
+		List<String> deviceNames = new ArrayList<>();
+		deviceNames.add(getString(R.string.audio_source_default_mic));
+
+		for (AudioDeviceInfo device : availableAudioDevices) {
+			deviceNames.add(AudioDeviceManager.getDeviceDisplayName(device) +
+					" (" + AudioDeviceManager.getDeviceTypeString(device) + ")");
+		}
+
+		ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+				android.R.layout.simple_spinner_item, deviceNames);
+		adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+		ignoreAudioSourceSelection = true;
+		audioSourceSelector.setAdapter(adapter);
+		audioSourceSelector.setSelection(0);
+		ignoreAudioSourceSelection = false;
+	}
+
+	private void requestRecordingPermission() {
+		if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+			if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+				requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_CODE_RECORD_AUDIO);
+			}
+		}
+	}
+
+	@Override
+	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+		if (requestCode == REQ_CODE_RECORD_AUDIO) {
+			if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+				Toast.makeText(this, R.string.error_permission_denied, Toast.LENGTH_LONG).show();
+			}
+		}
 	}
 
 	@Override
@@ -268,7 +353,17 @@ public class SetupActivity extends Activity implements SetupContract.View, View.
 
 	@Override
 	public void showRecordingFormat(String formatKey) {
-		formatSetting.setSelected(formatKey);
+		// Recording format is always WAV now, no UI needed
+	}
+
+	@Override
+	public void showOutputFormat(String outputFormatKey) {
+		outputFormatSetting.setSelected(outputFormatKey);
+	}
+
+	@Override
+	public void showBitDepth(int bitDepth) {
+		bitDepthSetting.setSelected(SettingsMapper.bitDepthToKey(bitDepth));
 	}
 
 	@Override
@@ -283,44 +378,15 @@ public class SetupActivity extends Activity implements SetupContract.View, View.
 
 	@Override
 	public void showInformation(int infoResId) {
-		txtInformation.setText(infoResId);
 	}
 
 	@Override
 	public void showSizePerMin(String size) {
-		txtSizePerMin.setText(getString(R.string.size_per_min, size));
 	}
 
 	@Override
 	public void updateRecordingInfo(String format) {
-		String[] sampleRateKeys = new String[] {
-				SettingsMapper.SAMPLE_RATE_22050,
-				SettingsMapper.SAMPLE_RATE_32000,
-				SettingsMapper.SAMPLE_RATE_44100,
-				SettingsMapper.SAMPLE_RATE_48000
-		};
-		if (format.equals(AppConstants.FORMAT_3GP)) {
-			sampleRateSetting.removeChip(sampleRateKeys);
-			if (sampleRateSetting.getSelected() == null) {
-				sampleRateSetting.setSelected(SettingsMapper.SAMPLE_RATE_16000);
-			}
-		} else {
-			String[] sampleRates = getResources().getStringArray(R.array.sample_rates2);
-			String[] values = new String[] {
-					sampleRates[2],
-					sampleRates[3],
-					sampleRates[4],
-					sampleRates[5]
-			};
-			sampleRateSetting.addChip(sampleRateKeys, values);
-		}
-
-		if (format.equals(AppConstants.FORMAT_3GP)) {
-			channelsSetting.removeChip(new String[] {SettingsMapper.CHANNEL_COUNT_STEREO});
-			channelsSetting.setSelected(SettingsMapper.CHANNEL_COUNT_MONO);
-		} else {
-			channelsSetting.addChip(new String[] {SettingsMapper.CHANNEL_COUNT_STEREO}, new String[] {getString(R.string.stereo)});
-		}
+		// WAV is the only recording format now; all sample rates and channels are available
 	}
 
 	@Override

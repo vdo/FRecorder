@@ -1,5 +1,5 @@
 <resources>
-	<string name="app_name">Audio Recorder</string>
+	<string name="app_name">FRecorder</string>
 
 	<string name="records">Records</string>
 	<string name="settings">Settings</string>
@@ -9,10 +9,31 @@
 	<string name="monitoring_on">Monitoring on</string>
 	<string name="monitoring_off">Monitoring off</string>
 	<string name="monitoring_wav_only">Live monitoring is only available with WAV format</string>
+	<string name="noise_reduction_on_save">Noise reduction on save (WAV)</string>
+	<string name="noise_reduction_processing">Applying noise reduction…</string>
+	<string name="noise_reduction_done">Noise reduction applied</string>
+	<string name="noise_reduction_failed">Noise reduction failed</string>
+	<string name="hpf">High-pass filter</string>
+	<string name="lpf">Low-pass filter</string>
+	<string name="hpf_off">HPF off</string>
+	<string name="hpf_80">HPF 80 Hz</string>
+	<string name="hpf_120">HPF 120 Hz</string>
+	<string name="lpf_off">LPF off</string>
+	<string name="lpf_9500">LPF 9.5 kHz</string>
+	<string name="lpf_15000">LPF 15 kHz</string>
+	<string name="filter_wav_only">Filters are only available with WAV format</string>
+	<string name="noise_gate">Noise gate</string>
+	<string name="noise_gate_on">Noise gate on</string>
+	<string name="noise_gate_off">Noise gate off</string>
+	<string name="mic_boost">Mic boost</string>
+	<string name="mic_boost_off">Mic boost off</string>
+	<string name="mic_boost_6db">Mic boost +6 dB</string>
+	<string name="mic_boost_12db">Mic boost +12 dB</string>
 	<string name="setup">Setup</string>
-	<string name="welcome_1">Welcome to a simple and fast application</string>
-	<string name="title_1">Audio Recorder</string>
-	<string name="rate_app">Rate app</string>
+	<string name="welcome_1">Welcome to a simple and fast field recorder</string>
+	<string name="title_1">FRecorder</string>
+	<string name="credits">Credits</string>
+	<string name="credits_message"><![CDATA[<b>FRecorder</b> is based on <b>Audio Recorder</b> by Dmytro Ponomarenko, licensed under the Apache License 2.0.<br><br>Original project: <b>github.com/Dimowner/AudioRecorder</b>]]></string>
 	<string name="store_records_public">Store records in a public dir</string>
 	<string name="record_in_stereo">Record in Stereo</string>
 	<string name="keep_screen_on">Keep screen ON while recording</string>
@@ -65,8 +86,7 @@
 	<string name="processing_canceled">Processing is canceled</string>
 	<string name="record_calculation">Waveform calculations&#8230;</string>
 	<string name="record_processing">Waveform drawing calculations&#8230;</string>
-	<string name="request">Request or feedback</string>
-	<string name="email_clients_not_found">Not found any Email client</string>
+		<string name="email_clients_not_found">Not found any Email client</string>
 	<string name="send_email">Send by email&#8230;</string>
 	<string name="open_record_with">Open %s with</string>
 	<string name="delete">Delete</string>
@@ -164,10 +184,7 @@
 	<string name="moving_record">Moving record: %s</string>
 	<string name="moving_record_cancel">Moving canceled</string>
 	<string name="move_records_info">Some of your records still stored in the public storage. Soon the public storage will become not available for the app. We need to move that records to the app\'s private directory.</string>
-	<string name="info_format"><b>M4a</b> format is encoded with AAC audio codec has good quality and small size. <b>(recommended)</b>
-		\n<b>Wav</b> is uncompressed audio data format. It takes much more space than other formats. It\'s needed for specific cases.
-		\n<b>3gp</b> is a multimedia container format developed for mobile telecommunication services. Use it if you need to save space.
-		</string>
+	<string name="info_format"><b>Wav</b> is uncompressed audio data format. Recording is always done in WAV for maximum quality. You can choose the output format (WAV, MP3, FLAC) in settings.</string>
 	<string name="info_frequency"><b>Sample rate</b> is the number of samples of audio carried per second.
 		\n<b>48kHz</b> is the sample rate used for DVDs.
 		\n<b>44,1kHz</b> is the sampling rate of Audio CDs. <b>(recommended)</b>
@@ -206,6 +223,10 @@
 	<string name="bitrate">Bitrate:</string>
 	<string name="channels">Channel count:</string>
 	<string name="sample_rate">Sample rate:</string>
+	<string name="output_format">Output format:</string>
+	<string name="info_output_format">Choose the format for saved recordings. Recording is always done in WAV internally for maximum quality.\n<b>WAV</b> - uncompressed, highest quality, largest files.\n<b>MP3 320kbps</b> - compressed, excellent quality, smaller files.\n<b>FLAC</b> - lossless compression, same quality as WAV, smaller files.</string>
+	<string name="bit_depth">WAV bit depth:</string>
+	<string name="info_bit_depth">Bit depth determines the dynamic range of the recording.\n<b>16-bit</b> - CD quality, suitable for most recordings. (recommended)\n<b>24-bit</b> - higher dynamic range, used in professional recording.</string>
 	<string name="audio_source">Audio input:</string>
 	<string name="audio_source_default_mic">Default Microphone</string>
 	<string name="info_audio_source">Select the audio input device for recording. External audio devices (USB microphones, audio interfaces) will appear when connected.</string>
@@ -255,7 +276,7 @@
 
 	<!-- Shown in the 'About' window of the app. -->
 	<string name="about_body"><![CDATA[
-    	<b>Audio Recorder 2023</b><br>
+    	<b>FRecorder</b><br>
 		Version %s
 	]]></string>
 	<!--<a href="http://#/">Application site</a>-->
@@ -273,9 +294,7 @@
 	</string-array>
 
 	<string-array name="formats2">
-		<item>M4a</item>
 		<item>Wav</item>
-		<item>3gp</item>
 	</string-array>
 
 	<string-array name="bit_rates2">

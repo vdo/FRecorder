@@ -58,11 +58,18 @@ import com.dimowner.audiorecorder.app.settings.SettingsActivity;
 import com.dimowner.audiorecorder.app.welcome.WelcomeActivity;
 import com.dimowner.audiorecorder.app.widget.RecordingWaveformView;
 import com.dimowner.audiorecorder.app.widget.WaveformViewNew;
+import com.dimowner.audiorecorder.AppConstants;
 import com.dimowner.audiorecorder.audio.AudioDecoder;
+import com.dimowner.audiorecorder.audio.player.AudioPlayerNew;
+import com.dimowner.audiorecorder.audio.player.PlayerContractNew;
+import com.dimowner.audiorecorder.audio.AudioDeviceManager;
 import com.dimowner.audiorecorder.audio.monitor.AudioMonitor;
 import com.dimowner.audiorecorder.audio.recorder.RecorderContract;
 import com.dimowner.audiorecorder.audio.recorder.WavRecorder;
 import com.dimowner.audiorecorder.data.FileRepository;
+import com.dimowner.audiorecorder.data.Prefs;
+
+import android.media.AudioDeviceInfo;
 import com.dimowner.audiorecorder.data.database.Record;
 import com.dimowner.audiorecorder.exception.CantCreateFileException;
 import com.dimowner.audiorecorder.exception.ErrorParser;
@@ -74,6 +81,8 @@ import com.dimowner.audiorecorder.util.TimeUtils;
 import java.io.File;
 import java.util.List;
 
+import android.app.AlertDialog;
+import android.widget.ProgressBar;
 import androidx.annotation.NonNull;
 import timber.log.Timber;
 
@@ -108,12 +117,17 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	private ImageButton btnShare;
 	private ImageButton btnImport;
 	private ImageButton btnMonitor;
+	private ImageButton btnHpf;
+	private ImageButton btnLpf;
+	private ImageButton btnNoiseGate;
+	private ImageButton btnMicBoost;
 	private boolean isMonitoringActive = false;
 	private ProgressBar progressBar;
 	private SeekBar playProgress;
 	private LinearLayout pnlImportProgress;
 	private LinearLayout pnlRecordProcessing;
 	private ImageView ivPlaceholder;
+	private AlertDialog noiseReductionDialog;
 
 	private MainContract.UserActionsListener presenter;
 	private ColorMap colorMap;
@@ -182,6 +196,10 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnShare = findViewById(R.id.btn_share);
 		btnImport = findViewById(R.id.btn_import);
 		btnMonitor = findViewById(R.id.btn_monitor);
+		btnHpf = findViewById(R.id.btn_hpf);
+		btnLpf = findViewById(R.id.btn_lpf);
+		btnNoiseGate = findViewById(R.id.btn_noise_gate);
+		btnMicBoost = findViewById(R.id.btn_mic_boost);
 		progressBar = findViewById(R.id.progress);
 		playProgress = findViewById(R.id.play_progress);
 		pnlImportProgress = findViewById(R.id.pnl_import_progress);
@@ -204,11 +222,15 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnImport.setOnClickListener(this);
 		txtName.setOnClickListener(this);
 		btnMonitor.setOnClickListener(this);
-		btnMonitor.setOnLongClickListener(v -> {
-			String result = AudioMonitor.getInstance().playTestTone();
-			Toast.makeText(this, "Test tone: " + result, Toast.LENGTH_LONG).show();
-			return true;
-		});
+		btnHpf.setOnClickListener(this);
+		btnLpf.setOnClickListener(this);
+		btnNoiseGate.setOnClickListener(this);
+		btnMicBoost.setOnClickListener(this);
+		isMonitoringActive = AudioMonitor.getInstance().isMonitoring();
+		btnMonitor.setAlpha(isMonitoringActive ? 1.0f : 0.5f);
+		updateFilterButtonAlpha();
+		updateNoiseGateButtonAlpha();
+		updateMicBoostButtonAlpha();
 		space = getResources().getDimension(R.dimen.spacing_xnormal);
 
 		playProgress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -277,12 +299,17 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			}
 		}
 		checkNotificationPermission();
+		checkRecordPermission2();
 	}
 
 	@Override
 	protected void onStart() {
 		super.onStart();
 		presenter.bindView(this);
+		PlayerContractNew.Player player = ARApplication.getInjector().provideAudioPlayer();
+		if (player instanceof AudioPlayerNew) {
+			((AudioPlayerNew) player).setContext(getApplicationContext());
+		}
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 			//This is needed for scoped storage support
 			presenter.storeInPrivateDir(getApplicationContext());
@@ -292,6 +319,29 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		presenter.setAudioRecorder(ARApplication.getInjector().provideAudioRecorder(getApplicationContext()));
 		presenter.updateRecordingDir(getApplicationContext());
 		presenter.loadActiveRecord();
+
+		// Sync monitor button with actual AudioMonitor state
+		isMonitoringActive = AudioMonitor.getInstance().isMonitoring();
+		btnMonitor.setAlpha(isMonitoringActive ? 1.0f : 0.5f);
+
+		// Set up noise reduction listener
+		RecorderContract.Recorder rec = ARApplication.getInjector().provideAudioRecorder(getApplicationContext());
+		if (rec instanceof WavRecorder) {
+			((WavRecorder) rec).setNoiseReductionListener(new WavRecorder.NoiseReductionListener() {
+				@Override
+				public void onNoiseReductionStart() {
+					showNoiseReductionDialog();
+				}
+				@Override
+				public void onNoiseReductionProgress(int percent) {
+					updateNoiseReductionDialog(percent);
+				}
+				@Override
+				public void onNoiseReductionEnd(boolean success) {
+					dismissNoiseReductionDialog(success);
+				}
+			});
+		}
 
 		Intent intent = new Intent(this, DecodeService.class);
 		bindService(intent, connection, Context.BIND_AUTO_CREATE);
@@ -347,6 +397,14 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			presenter.onRenameRecordClick();
 		} else if (id == R.id.btn_monitor) {
 			toggleMonitoring();
+		} else if (id == R.id.btn_hpf) {
+			toggleHpf();
+		} else if (id == R.id.btn_lpf) {
+			toggleLpf();
+		} else if (id == R.id.btn_noise_gate) {
+			toggleNoiseGate();
+		} else if (id == R.id.btn_mic_boost) {
+			toggleMicBoost();
 		}
 	}
 
@@ -372,24 +430,194 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		}
 		WavRecorder wavRecorder = (WavRecorder) recorder;
 		isMonitoringActive = !isMonitoringActive;
-		AudioMonitor.getInstance().setContext(getApplicationContext());
-		wavRecorder.setMonitoringEnabled(isMonitoringActive);
-		btnMonitor.setAlpha(isMonitoringActive ? 1.0f : 0.5f);
+		AudioMonitor monitor = AudioMonitor.getInstance();
+		monitor.setContext(getApplicationContext());
 
 		if (isMonitoringActive) {
-			// Show debug status after a short delay so AudioMonitor has time to start
-			btnMonitor.postDelayed(() -> {
-				String status = AudioMonitor.getInstance().getDebugStatus();
-				Toast.makeText(this, "Monitor ON\n" + status, Toast.LENGTH_LONG).show();
-			}, 300);
-			// Show again after 2s to see if feeds/writes are incrementing
-			btnMonitor.postDelayed(() -> {
-				String status = AudioMonitor.getInstance().getDebugStatus();
-				Toast.makeText(this, "2s: " + status, Toast.LENGTH_LONG).show();
-			}, 2500);
+			Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+			monitor.setNoiseGateEnabled(prefs.isNoiseGateEnabled());
+			monitor.setHpfMode(prefs.getHpfMode());
+			monitor.setLpfMode(prefs.getLpfMode());
+			monitor.setGainBoostLevel(prefs.getGainBoostLevel());
+			if (wavRecorder.isRecording()) {
+				// Recording is active — let recording loop feed the monitor
+				wavRecorder.setMonitoringEnabled(true);
+			} else {
+				// Not recording — start standalone monitoring
+				wavRecorder.setMonitoringEnabled(true); // flag for when recording starts
+				int sr = prefs.getSettingSampleRate();
+				int ch = prefs.getSettingChannelCount();
+				int deviceId = prefs.getSettingAudioSource();
+				AudioDeviceInfo audioDevice = null;
+				if (deviceId != AppConstants.AUDIO_SOURCE_DEFAULT_MIC) {
+					AudioDeviceManager adm = ARApplication.getInjector().provideAudioDeviceManager(getApplicationContext());
+					audioDevice = adm.getDeviceById(deviceId);
+				}
+				monitor.startStandalone(sr, ch, audioDevice);
+			}
 		} else {
-			Toast.makeText(this, R.string.monitoring_off, Toast.LENGTH_SHORT).show();
+			// Stop monitoring
+			if (monitor.isStandalone()) {
+				monitor.stopStandalone();
+			}
+			wavRecorder.setMonitoringEnabled(false);
 		}
+
+		btnMonitor.setAlpha(isMonitoringActive ? 1.0f : 0.5f);
+		Toast.makeText(this,
+				isMonitoringActive ? R.string.monitoring_on : R.string.monitoring_off,
+				Toast.LENGTH_SHORT).show();
+	}
+
+	private void toggleHpf() {
+		RecorderContract.Recorder recorder = ARApplication.getInjector().provideAudioRecorder(getApplicationContext());
+		if (!(recorder instanceof WavRecorder)) {
+			Toast.makeText(this, R.string.filter_wav_only, Toast.LENGTH_SHORT).show();
+			return;
+		}
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+		WavRecorder wavRecorder = (WavRecorder) recorder;
+		int current = prefs.getHpfMode();
+		int next = (current + 1) % 3; // OFF -> 80 -> 120 -> OFF
+		prefs.setHpfMode(next);
+		wavRecorder.setHpfMode(next);
+		AudioMonitor.getInstance().setHpfMode(next);
+		updateFilterButtonAlpha();
+		int msgRes;
+		switch (next) {
+			case AppConstants.HPF_80: msgRes = R.string.hpf_80; break;
+			case AppConstants.HPF_120: msgRes = R.string.hpf_120; break;
+			default: msgRes = R.string.hpf_off; break;
+		}
+		Toast.makeText(this, msgRes, Toast.LENGTH_SHORT).show();
+	}
+
+	private void toggleLpf() {
+		RecorderContract.Recorder recorder = ARApplication.getInjector().provideAudioRecorder(getApplicationContext());
+		if (!(recorder instanceof WavRecorder)) {
+			Toast.makeText(this, R.string.filter_wav_only, Toast.LENGTH_SHORT).show();
+			return;
+		}
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+		WavRecorder wavRecorder = (WavRecorder) recorder;
+		int current = prefs.getLpfMode();
+		int next = (current + 1) % 3; // OFF -> 9500 -> 15000 -> OFF
+		prefs.setLpfMode(next);
+		wavRecorder.setLpfMode(next);
+		AudioMonitor.getInstance().setLpfMode(next);
+		updateFilterButtonAlpha();
+		int msgRes;
+		switch (next) {
+			case AppConstants.LPF_9500: msgRes = R.string.lpf_9500; break;
+			case AppConstants.LPF_15000: msgRes = R.string.lpf_15000; break;
+			default: msgRes = R.string.lpf_off; break;
+		}
+		Toast.makeText(this, msgRes, Toast.LENGTH_SHORT).show();
+	}
+
+	private void updateFilterButtonAlpha() {
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+		btnHpf.setAlpha(prefs.getHpfMode() != AppConstants.HPF_OFF ? 1.0f : 0.5f);
+		btnLpf.setAlpha(prefs.getLpfMode() != AppConstants.LPF_OFF ? 1.0f : 0.5f);
+	}
+
+	private void toggleNoiseGate() {
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+		AudioMonitor monitor = AudioMonitor.getInstance();
+		boolean enabled = !prefs.isNoiseGateEnabled();
+		prefs.setNoiseGateEnabled(enabled);
+		monitor.setNoiseGateEnabled(enabled);
+		updateNoiseGateButtonAlpha();
+		Toast.makeText(this,
+				enabled ? R.string.noise_gate_on : R.string.noise_gate_off,
+				Toast.LENGTH_SHORT).show();
+	}
+
+	private void updateNoiseGateButtonAlpha() {
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+		btnNoiseGate.setAlpha(prefs.isNoiseGateEnabled() ? 1.0f : 0.5f);
+	}
+
+	private void toggleMicBoost() {
+		RecorderContract.Recorder recorder = ARApplication.getInjector().provideAudioRecorder(getApplicationContext());
+		if (!(recorder instanceof WavRecorder)) {
+			Toast.makeText(this, R.string.filter_wav_only, Toast.LENGTH_SHORT).show();
+			return;
+		}
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+		WavRecorder wavRecorder = (WavRecorder) recorder;
+		int current = prefs.getGainBoostLevel();
+		int next = (current + 1) % 3; // OFF -> 6dB -> 12dB -> OFF
+		prefs.setGainBoostLevel(next);
+		wavRecorder.setGainBoostLevel(next);
+		AudioMonitor.getInstance().setGainBoostLevel(next);
+		updateMicBoostButtonAlpha();
+		int msgRes;
+		switch (next) {
+			case AppConstants.GAIN_BOOST_6DB: msgRes = R.string.mic_boost_6db; break;
+			case AppConstants.GAIN_BOOST_12DB: msgRes = R.string.mic_boost_12db; break;
+			default: msgRes = R.string.mic_boost_off; break;
+		}
+		Toast.makeText(this, msgRes, Toast.LENGTH_SHORT).show();
+	}
+
+	private void updateMicBoostButtonAlpha() {
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+		btnMicBoost.setAlpha(prefs.getGainBoostLevel() != AppConstants.GAIN_BOOST_OFF ? 1.0f : 0.5f);
+	}
+
+	private void showNoiseReductionDialog() {
+		if (noiseReductionDialog != null && noiseReductionDialog.isShowing()) return;
+		android.widget.ProgressBar pb = new android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+		pb.setIndeterminate(false);
+		pb.setMax(100);
+		pb.setProgress(0);
+		pb.setPadding(48, 24, 48, 24);
+		noiseReductionDialog = new AlertDialog.Builder(this)
+				.setTitle(R.string.noise_reduction_processing)
+				.setView(pb)
+				.setCancelable(false)
+				.create();
+		noiseReductionDialog.show();
+	}
+
+	private void updateNoiseReductionDialog(int percent) {
+		if (noiseReductionDialog != null && noiseReductionDialog.isShowing()) {
+			android.widget.ProgressBar pb = noiseReductionDialog.findViewById(android.R.id.progress);
+			if (pb == null) {
+				// Find the ProgressBar we set as the view
+				View v = noiseReductionDialog.getWindow().getDecorView();
+				if (v instanceof android.view.ViewGroup) {
+					pb = findProgressBar((android.view.ViewGroup) v);
+				}
+			}
+			if (pb != null) {
+				pb.setProgress(percent);
+			}
+		}
+	}
+
+	private android.widget.ProgressBar findProgressBar(android.view.ViewGroup group) {
+		for (int i = 0; i < group.getChildCount(); i++) {
+			View child = group.getChildAt(i);
+			if (child instanceof android.widget.ProgressBar) {
+				return (android.widget.ProgressBar) child;
+			} else if (child instanceof android.view.ViewGroup) {
+				android.widget.ProgressBar result = findProgressBar((android.view.ViewGroup) child);
+				if (result != null) return result;
+			}
+		}
+		return null;
+	}
+
+	private void dismissNoiseReductionDialog(boolean success) {
+		if (noiseReductionDialog != null && noiseReductionDialog.isShowing()) {
+			noiseReductionDialog.dismiss();
+			noiseReductionDialog = null;
+		}
+		Toast.makeText(this,
+				success ? R.string.noise_reduction_done : R.string.noise_reduction_failed,
+				Toast.LENGTH_SHORT).show();
 	}
 
 	@Override
@@ -480,8 +708,22 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		recordingWaveformView.setVisibility(View.GONE);
 		recordingWaveformView.reset();
 		txtProgress.setText(TimeUtils.formatTimeIntervalHourMinSec2(0));
-		isMonitoringActive = false;
-		btnMonitor.setAlpha(0.5f);
+		// Sync monitor button with actual state — monitoring may still be running as standalone
+		isMonitoringActive = AudioMonitor.getInstance().isMonitoring();
+		btnMonitor.setAlpha(isMonitoringActive ? 1.0f : 0.5f);
+	}
+
+	@Override
+	public void onMonitoringDisabled() {
+		runOnUiThread(() -> {
+			isMonitoringActive = false;
+			btnMonitor.setAlpha(0.5f);
+			// Also reset the WavRecorder flag so monitoring doesn't auto-start on next recording
+			RecorderContract.Recorder recorder = ARApplication.getInjector().provideAudioRecorder(getApplicationContext());
+			if (recorder instanceof WavRecorder) {
+				((WavRecorder) recorder).setMonitoringEnabled(false);
+			}
+		});
 	}
 
 	@Override

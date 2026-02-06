@@ -325,6 +325,16 @@
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content" />
 
+		<com.dimowner.audiorecorder.app.widget.SettingView
+				android:id="@+id/setting_output_format"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content" />
+
+		<com.dimowner.audiorecorder.app.widget.SettingView
+				android:id="@+id/setting_bit_depth"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content" />
+
 		<LinearLayout
 				android:id="@+id/panelAudioSource"
 				android:layout_width="match_parent"
@@ -357,6 +367,29 @@
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content" />
 
+		<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="horizontal"
+				android:gravity="center_vertical"
+				android:paddingStart="@dimen/spacing_normal"
+				android:paddingEnd="@dimen/spacing_normal"
+				android:paddingTop="@dimen/spacing_small"
+				android:paddingBottom="@dimen/spacing_small">
+
+			<TextView
+					style="@style/Text.NormalLabel"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:text="@string/noise_reduction_on_save" />
+
+			<Switch
+					android:id="@+id/swNoiseReduction"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content" />
+		</LinearLayout>
+
 		<!--<TextView-->
 				<!--android:id="@+id/btnDeleteAll"-->
 				<!--style="@style/Text.NormalLabel"-->
@@ -370,29 +403,14 @@
 				<!--/>-->
 
 		<TextView
-				android:id="@+id/btnRate"
+				android:id="@+id/btnCredits"
 				style="@style/Text.NormalLabel"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:text="@string/rate_app"
-				android:drawableStart="@drawable/ic_thumbs"
+				android:text="@string/credits"
+				android:drawableStart="@drawable/ic_info"
 				android:background="?android:selectableItemBackground"
 				android:layout_marginTop="@dimen/spacing_small"
-				android:paddingStart="@dimen/spacing_normal"
-				android:paddingEnd="@dimen/spacing_normal"
-				android:paddingTop="@dimen/spacing_medium"
-				android:paddingBottom="@dimen/spacing_medium"
-				android:drawablePadding="@dimen/spacing_normal"
-				/>
-
-		<TextView
-				android:id="@+id/btnRequest"
-				style="@style/Text.NormalLabel"
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:text="@string/request"
-				android:drawableStart="@drawable/ic_chat_bubble"
-				android:background="?android:selectableItemBackground"
 				android:paddingStart="@dimen/spacing_normal"
 				android:paddingEnd="@dimen/spacing_normal"
 				android:paddingTop="@dimen/spacing_medium"

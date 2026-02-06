@@ -193,7 +193,9 @@ public class AudioRecorder implements RecorderContract.Recorder {
 			if (recorderCallback != null && recorder != null) {
 				try {
 					long curTime = System.currentTimeMillis();
-					durationMills += curTime - updateTime;
+					if (updateTime > 0) {
+						durationMills += curTime - updateTime;
+					}
 					updateTime = curTime;
 					recorderCallback.onRecordProgress(durationMills, recorder.getMaxAmplitude());
 				} catch (IllegalStateException e) {

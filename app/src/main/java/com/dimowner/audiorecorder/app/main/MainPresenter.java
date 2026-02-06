@@ -33,6 +33,7 @@ import com.dimowner.audiorecorder.app.AppRecorderCallback;
 import com.dimowner.audiorecorder.app.info.RecordInfo;
 import com.dimowner.audiorecorder.app.settings.SettingsMapper;
 import com.dimowner.audiorecorder.audio.AudioDecoder;
+import com.dimowner.audiorecorder.audio.monitor.AudioMonitor;
 import com.dimowner.audiorecorder.audio.player.PlayerContractNew;
 import com.dimowner.audiorecorder.audio.recorder.RecorderContract;
 import com.dimowner.audiorecorder.data.RecordDataSource;
@@ -209,6 +210,16 @@ public class MainPresenter implements MainContract.UserActionsListener {
 			playerCallback = new PlayerContractNew.PlayerCallback() {
 				@Override
 				public void onStartPlay() {
+					// Stop monitor completely to free audio device for playback
+					AudioMonitor monitor = AudioMonitor.getInstance();
+					if (monitor.isStandalone()) {
+						monitor.stopStandalone();
+					} else if (monitor.isMonitoring()) {
+						monitor.stop();
+					}
+					if (view != null) {
+						view.onMonitoringDisabled();
+					}
 					loadingTasks.postRunnable(() -> {
 						Record record = recordDataSource.getActiveRecord();
 						AndroidUtils.runOnUIThread(() -> {

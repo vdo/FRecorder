@@ -72,11 +72,29 @@ public interface Prefs {
 	void setSettingChannelCount(int count);
 	int getSettingChannelCount();
 
+	void setSettingOutputFormat(String outputFormat);
+	String getSettingOutputFormat();
+
+	void setSettingBitDepth(int bitDepth);
+	int getSettingBitDepth();
+
 	void setSettingAudioSource(int deviceId);
 	int getSettingAudioSource();
 
 	void setGainBoostLevel(int level);
 	int getGainBoostLevel();
+
+	void setNoiseReductionEnabled(boolean enabled);
+	boolean isNoiseReductionEnabled();
+
+	void setHpfMode(int mode);
+	int getHpfMode();
+
+	void setLpfMode(int mode);
+	int getLpfMode();
+
+	void setNoiseGateEnabled(boolean enabled);
+	boolean isNoiseGateEnabled();
 
 	void resetSettings();
 }
