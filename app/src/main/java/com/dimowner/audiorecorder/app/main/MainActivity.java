@@ -121,6 +121,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	private ImageButton btnLpf;
 	private ImageButton btnNoiseGate;
 	private ImageButton btnMicBoost;
+	private ImageButton btnNoiseReduction;
 	private boolean isMonitoringActive = false;
 	private ProgressBar progressBar;
 	private SeekBar playProgress;
@@ -200,6 +201,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnLpf = findViewById(R.id.btn_lpf);
 		btnNoiseGate = findViewById(R.id.btn_noise_gate);
 		btnMicBoost = findViewById(R.id.btn_mic_boost);
+		btnNoiseReduction = findViewById(R.id.btn_noise_reduction);
 		progressBar = findViewById(R.id.progress);
 		playProgress = findViewById(R.id.play_progress);
 		pnlImportProgress = findViewById(R.id.pnl_import_progress);
@@ -226,11 +228,13 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnLpf.setOnClickListener(this);
 		btnNoiseGate.setOnClickListener(this);
 		btnMicBoost.setOnClickListener(this);
+		btnNoiseReduction.setOnClickListener(this);
 		isMonitoringActive = AudioMonitor.getInstance().isMonitoring();
 		btnMonitor.setAlpha(isMonitoringActive ? 1.0f : 0.5f);
 		updateFilterButtonAlpha();
 		updateNoiseGateButtonAlpha();
 		updateMicBoostButtonAlpha();
+		updateNoiseReductionButtonAlpha();
 		space = getResources().getDimension(R.dimen.spacing_xnormal);
 
 		playProgress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -405,6 +409,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			toggleNoiseGate();
 		} else if (id == R.id.btn_mic_boost) {
 			toggleMicBoost();
+		} else if (id == R.id.btn_noise_reduction) {
+			toggleNoiseReduction();
 		}
 	}
 
@@ -429,44 +435,60 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			return;
 		}
 		WavRecorder wavRecorder = (WavRecorder) recorder;
-		isMonitoringActive = !isMonitoringActive;
 		AudioMonitor monitor = AudioMonitor.getInstance();
 		monitor.setContext(getApplicationContext());
 
-		if (isMonitoringActive) {
+		if (!isMonitoringActive) {
+			// About to enable monitoring — check for feedback risk
 			Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
-			monitor.setNoiseGateEnabled(prefs.isNoiseGateEnabled());
-			monitor.setHpfMode(prefs.getHpfMode());
-			monitor.setLpfMode(prefs.getLpfMode());
-			monitor.setGainBoostLevel(prefs.getGainBoostLevel());
-			if (wavRecorder.isRecording()) {
-				// Recording is active — let recording loop feed the monitor
-				wavRecorder.setMonitoringEnabled(true);
-			} else {
-				// Not recording — start standalone monitoring
-				wavRecorder.setMonitoringEnabled(true); // flag for when recording starts
-				int sr = prefs.getSettingSampleRate();
-				int ch = prefs.getSettingChannelCount();
-				int deviceId = prefs.getSettingAudioSource();
-				AudioDeviceInfo audioDevice = null;
-				if (deviceId != AppConstants.AUDIO_SOURCE_DEFAULT_MIC) {
-					AudioDeviceManager adm = ARApplication.getInjector().provideAudioDeviceManager(getApplicationContext());
-					audioDevice = adm.getDeviceById(deviceId);
-				}
-				monitor.startStandalone(sr, ch, audioDevice);
+			int deviceId = prefs.getSettingAudioSource();
+			AudioDeviceInfo audioDevice = null;
+			if (deviceId != AppConstants.AUDIO_SOURCE_DEFAULT_MIC) {
+				AudioDeviceManager adm = ARApplication.getInjector().provideAudioDeviceManager(getApplicationContext());
+				audioDevice = adm.getDeviceById(deviceId);
 			}
+
+			if (monitor.hasFeedbackRisk(audioDevice)) {
+				new AlertDialog.Builder(this)
+						.setTitle(R.string.monitoring_feedback_warning_title)
+						.setMessage(R.string.monitoring_feedback_warning)
+						.setPositiveButton(R.string.btn_ok, null)
+						.show();
+				return;
+			}
+
+			enableMonitoring(wavRecorder, monitor, prefs, audioDevice);
 		} else {
 			// Stop monitoring
 			if (monitor.isStandalone()) {
 				monitor.stopStandalone();
 			}
 			wavRecorder.setMonitoringEnabled(false);
+			isMonitoringActive = false;
 		}
 
 		btnMonitor.setAlpha(isMonitoringActive ? 1.0f : 0.5f);
 		Toast.makeText(this,
 				isMonitoringActive ? R.string.monitoring_on : R.string.monitoring_off,
 				Toast.LENGTH_SHORT).show();
+	}
+
+	private void enableMonitoring(WavRecorder wavRecorder, AudioMonitor monitor, Prefs prefs, AudioDeviceInfo audioDevice) {
+		isMonitoringActive = true;
+		monitor.setNoiseGateEnabled(prefs.isNoiseGateEnabled());
+		monitor.setHpfMode(prefs.getHpfMode());
+		monitor.setLpfMode(prefs.getLpfMode());
+		monitor.setGainBoostLevel(prefs.getGainBoostLevel());
+		if (wavRecorder.isRecording()) {
+			// Recording is active — let recording loop feed the monitor
+			wavRecorder.setMonitoringEnabled(true);
+		} else {
+			// Not recording — start standalone monitoring
+			wavRecorder.setMonitoringEnabled(true); // flag for when recording starts
+			int sr = prefs.getSettingSampleRate();
+			int ch = prefs.getSettingChannelCount();
+			monitor.startStandalone(sr, ch, audioDevice);
+		}
 	}
 
 	private void toggleHpf() {
@@ -568,6 +590,25 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	private void updateMicBoostButtonAlpha() {
 		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
 		btnMicBoost.setAlpha(prefs.getGainBoostLevel() != AppConstants.GAIN_BOOST_OFF ? 1.0f : 0.5f);
+	}
+
+	private void toggleNoiseReduction() {
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+		boolean enabled = !prefs.isNoiseReductionEnabled();
+		prefs.setNoiseReductionEnabled(enabled);
+		RecorderContract.Recorder rec = ARApplication.getInjector().provideAudioRecorder(getApplicationContext());
+		if (rec instanceof WavRecorder) {
+			((WavRecorder) rec).setNoiseReductionEnabled(enabled);
+		}
+		updateNoiseReductionButtonAlpha();
+		Toast.makeText(this,
+				enabled ? R.string.noise_reduction_on : R.string.noise_reduction_off,
+				Toast.LENGTH_SHORT).show();
+	}
+
+	private void updateNoiseReductionButtonAlpha() {
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+		btnNoiseReduction.setAlpha(prefs.isNoiseReductionEnabled() ? 1.0f : 0.5f);
 	}
 
 	private void showNoiseReductionDialog() {

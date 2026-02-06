@@ -38,7 +38,7 @@
 				android:contentDescription="@null"
 				android:layout_gravity="start"
 				android:background="?android:selectableItemBackgroundBorderless"
-				android:padding="@dimen/spacing_normal"
+				android:padding="@dimen/spacing_medium"
 				android:src="@drawable/ic_import"/>
 
 		<ImageButton
@@ -48,7 +48,7 @@
 				android:contentDescription="@string/monitor"
 				android:layout_gravity="start"
 				android:background="?android:selectableItemBackgroundBorderless"
-				android:padding="@dimen/spacing_normal"
+				android:padding="@dimen/spacing_medium"
 				android:alpha="0.5"
 				android:src="@drawable/ic_headset"/>
 
@@ -59,7 +59,7 @@
 				android:contentDescription="@string/hpf"
 				android:layout_gravity="start"
 				android:background="?android:selectableItemBackgroundBorderless"
-				android:padding="@dimen/spacing_normal"
+				android:padding="@dimen/spacing_medium"
 				android:alpha="0.5"
 				android:src="@drawable/ic_hpf"/>
 
@@ -70,7 +70,7 @@
 				android:contentDescription="@string/lpf"
 				android:layout_gravity="start"
 				android:background="?android:selectableItemBackgroundBorderless"
-				android:padding="@dimen/spacing_normal"
+				android:padding="@dimen/spacing_medium"
 				android:alpha="0.5"
 				android:src="@drawable/ic_lpf"/>
 
@@ -81,7 +81,7 @@
 				android:contentDescription="@string/noise_gate"
 				android:layout_gravity="start"
 				android:background="?android:selectableItemBackgroundBorderless"
-				android:padding="@dimen/spacing_normal"
+				android:padding="@dimen/spacing_medium"
 				android:alpha="0.5"
 				android:src="@drawable/ic_noise_gate"/>
 
@@ -92,9 +92,20 @@
 				android:contentDescription="@string/mic_boost"
 				android:layout_gravity="start"
 				android:background="?android:selectableItemBackgroundBorderless"
-				android:padding="@dimen/spacing_normal"
+				android:padding="@dimen/spacing_medium"
 				android:alpha="0.5"
 				android:src="@drawable/ic_mic_boost"/>
+
+		<ImageButton
+				android:id="@+id/btn_noise_reduction"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:contentDescription="@string/noise_reduction_on_save"
+				android:layout_gravity="start"
+				android:background="?android:selectableItemBackgroundBorderless"
+				android:padding="@dimen/spacing_medium"
+				android:alpha="0.5"
+				android:src="@drawable/ic_noise_reduction"/>
 
 		<View
 				android:layout_width="0dp"

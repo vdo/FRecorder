@@ -9,7 +9,11 @@
 	<string name="monitoring_on">Monitoring on</string>
 	<string name="monitoring_off">Monitoring off</string>
 	<string name="monitoring_wav_only">Live monitoring is only available with WAV format</string>
+	<string name="monitoring_feedback_warning_title">Feedback warning</string>
+	<string name="monitoring_feedback_warning">The microphone input and speaker output are the same device. This will cause audio feedback.\n\nConnect headphones or an external audio device to use monitoring safely.</string>
 	<string name="noise_reduction_on_save">Noise reduction on save (WAV)</string>
+	<string name="noise_reduction_on">Noise reduction on</string>
+	<string name="noise_reduction_off">Noise reduction off</string>
 	<string name="noise_reduction_processing">Applying noise reduction…</string>
 	<string name="noise_reduction_done">Noise reduction applied</string>
 	<string name="noise_reduction_failed">Noise reduction failed</string>

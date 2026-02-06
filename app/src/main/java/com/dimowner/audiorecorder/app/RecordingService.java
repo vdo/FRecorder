@@ -312,9 +312,9 @@ public class RecordingService extends Service {
 		builder.setWhen(System.currentTimeMillis());
 		builder.setSmallIcon(R.drawable.ic_record_rec);
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-			builder.setPriority(NotificationManager.IMPORTANCE_MAX);
+			builder.setPriority(NotificationCompat.PRIORITY_LOW);
 		} else {
-			builder.setPriority(Notification.PRIORITY_MAX);
+			builder.setPriority(Notification.PRIORITY_LOW);
 		}
 		// Make head-up notification.
 		builder.setContentIntent(contentPendingIntent);
@@ -352,7 +352,7 @@ public class RecordingService extends Service {
 	private void createNotificationChannel(String channelId, String channelName) {
 		NotificationChannel channel = notificationManager.getNotificationChannel(channelId);
 		if (channel == null) {
-			NotificationChannel chan = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH);
+			NotificationChannel chan = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_LOW);
 			chan.setLightColor(Color.BLUE);
 			chan.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
 			chan.setSound(null, null);

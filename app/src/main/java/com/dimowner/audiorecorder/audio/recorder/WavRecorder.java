@@ -268,13 +268,14 @@ public class WavRecorder implements RecorderContract.Recorder {
 				}
 			}
 			durationMills = 0;
-			recorder.release();
 			recordingThread.interrupt();
 
 			// Wait for recording thread to finish writing WAV header
 			try {
 				recordingThread.join(5000);
 			} catch (InterruptedException ignored) {}
+
+			recorder.release();
 
 			// Restart monitoring as standalone now that AudioRecord is released
 			if (monitoringEnabled && !audioMonitor.isMonitoring()) {
@@ -344,10 +345,14 @@ public class WavRecorder implements RecorderContract.Recorder {
 			//TODO: Disable loop while pause.
 			while (isRecording.get()) {
 				if (!isPaused.get()) {
-					chunksCount += recorder.read(data, 0, bufferSize);
+					int bytesRead = recorder.read(data, 0, bufferSize);
+					if (bytesRead <= 0) continue;
+					// Ensure even number of bytes (16-bit samples)
+					bytesRead = bytesRead & ~1;
+					chunksCount += bytesRead;
 					if (AudioRecord.ERROR_INVALID_OPERATION != chunksCount) {
 						long sum = 0;
-						for (int i = 0; i < bufferSize; i+=2) {
+						for (int i = 0; i < bytesRead; i+=2) {
 							//TODO: find a better way to covert bytes into shorts.
 							shortBuffer.put(data[i]);
 							shortBuffer.put(data[i+1]);
@@ -393,20 +398,22 @@ public class WavRecorder implements RecorderContract.Recorder {
 							sum += Math.abs(sample);
 							shortBuffer.clear();
 						}
-						lastVal = (int)(sum/(bufferSize/16));
+						lastVal = (int)(sum / Math.max(1, bytesRead / 16));
 
 						// Apply noise gate to recording data
 						if (noiseGateEnabled) {
-							processNoiseGate(data, bufferSize);
+							processNoiseGate(data, bytesRead);
 						}
 
 						// Feed audio to monitor if enabled (after gain boost is applied)
 						if (monitoringEnabled && audioMonitor.isMonitoring()) {
-							audioMonitor.feedAudio(data.clone());
+							byte[] monitorData = new byte[bytesRead];
+							System.arraycopy(data, 0, monitorData, 0, bytesRead);
+							audioMonitor.feedAudio(monitorData);
 						}
 
 						try {
-							fos.write(data);
+							fos.write(data, 0, bytesRead);
 						} catch (IOException e) {
 							Timber.e(e);
 							AndroidUtils.runOnUIThread(() -> {
@@ -427,7 +434,25 @@ public class WavRecorder implements RecorderContract.Recorder {
 			} catch (IOException e) {
 				Timber.e(e);
 			}
+			// Trim last 200ms to remove stop transient/glitch
+			trimTail(recordFile, channelCount);
 			setWaveFileHeader(recordFile, channelCount);
+		}
+	}
+
+	private void trimTail(File file, int channels) {
+		// Remove the last 200ms of audio to eliminate the stop transient
+		int bytesPerSample = channels * (RECORDER_BPP / 8);
+		int tailBytes = (int) (sampleRate * 0.2) * bytesPerSample;
+		long dataLen = file.length() - 44; // subtract WAV header
+		if (dataLen > tailBytes) {
+			try {
+				RandomAccessFile raf = randomAccessFile(file);
+				raf.setLength(file.length() - tailBytes);
+				raf.close();
+			} catch (IOException e) {
+				Timber.e(e, "trimTail failed");
+			}
 		}
 	}
 

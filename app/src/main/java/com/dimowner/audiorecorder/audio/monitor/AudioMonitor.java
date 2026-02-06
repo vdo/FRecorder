@@ -671,6 +671,43 @@ public class AudioMonitor {
     }
 
     /**
+     * Check if monitoring would cause audio feedback.
+     * Feedback occurs when the input is the built-in mic (no external device)
+     * and the output would go to the built-in speaker (no headphones/BT connected).
+     *
+     * @param inputDevice The selected input device, or null for default built-in mic.
+     * @return true if there is a feedback risk.
+     */
+    public boolean hasFeedbackRisk(AudioDeviceInfo inputDevice) {
+        if (appContext == null) return false;
+
+        // If an external input device is selected, the mic won't pick up speaker output
+        if (inputDevice != null) return false;
+
+        // Check if the only available output is the built-in speaker
+        AudioManager audioManager = (AudioManager) appContext.getSystemService(Context.AUDIO_SERVICE);
+        if (audioManager == null) return false;
+
+        AudioDeviceInfo[] devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+        for (AudioDeviceInfo device : devices) {
+            int type = device.getType();
+            if (type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                    type == AudioDeviceInfo.TYPE_BLE_HEADSET ||
+                    type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                    type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
+                    type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
+                    type == AudioDeviceInfo.TYPE_USB_DEVICE ||
+                    type == AudioDeviceInfo.TYPE_USB_HEADSET) {
+                // An isolated output device is connected — no feedback risk
+                return false;
+            }
+        }
+
+        // Only built-in speaker available with built-in mic — feedback risk
+        return true;
+    }
+
+    /**
      * Find a non-USB output device, preferring Bluetooth A2DP, then Bluetooth SCO,
      * then wired headset, then built-in speaker.
      */
