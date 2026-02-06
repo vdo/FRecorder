@@ -510,6 +510,10 @@ public class WavRecorder implements RecorderContract.Recorder {
 		updateTime = 0;
 	}
 
+	public void setGainBoostLevel(int level) {
+		this.gainBoostLevel = level;
+	}
+
 	private float getGainMultiplier() {
 		switch (gainBoostLevel) {
 			case AppConstants.GAIN_BOOST_6DB:

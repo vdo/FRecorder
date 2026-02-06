@@ -22,6 +22,13 @@
 	<string name="lpf_9500">LPF 9.5 kHz</string>
 	<string name="lpf_15000">LPF 15 kHz</string>
 	<string name="filter_wav_only">Filters are only available with WAV format</string>
+	<string name="noise_gate">Noise gate</string>
+	<string name="noise_gate_on">Noise gate on</string>
+	<string name="noise_gate_off">Noise gate off</string>
+	<string name="mic_boost">Mic boost</string>
+	<string name="mic_boost_off">Mic boost off</string>
+	<string name="mic_boost_6db">Mic boost +6 dB</string>
+	<string name="mic_boost_12db">Mic boost +12 dB</string>
 	<string name="setup">Setup</string>
 	<string name="welcome_1">Welcome to a simple and fast application</string>
 	<string name="title_1">Audio Recorder</string>

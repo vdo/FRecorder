@@ -61,6 +61,7 @@ public class PrefsImpl implements Prefs {
 	private static final String PREF_KEY_NOISE_REDUCTION_ENABLED = "noise_reduction_enabled";
 	private static final String PREF_KEY_HPF_MODE = "hpf_mode";
 	private static final String PREF_KEY_LPF_MODE = "lpf_mode";
+	private static final String PREF_KEY_NOISE_GATE_ENABLED = "noise_gate_enabled";
 
 	private final SharedPreferences sharedPreferences;
 
@@ -461,6 +462,18 @@ public class PrefsImpl implements Prefs {
 	}
 
 	@Override
+	public void setNoiseGateEnabled(boolean enabled) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putBoolean(PREF_KEY_NOISE_GATE_ENABLED, enabled);
+		editor.apply();
+	}
+
+	@Override
+	public boolean isNoiseGateEnabled() {
+		return sharedPreferences.getBoolean(PREF_KEY_NOISE_GATE_ENABLED, AppConstants.DEFAULT_NOISE_GATE_ENABLED);
+	}
+
+	@Override
 	public void resetSettings() {
 		SharedPreferences.Editor editor = sharedPreferences.edit();
 //		editor.putString(PREF_KEY_SETTING_THEME_COLOR, AppConstants.DEFAULT_THEME_COLOR);
@@ -474,6 +487,7 @@ public class PrefsImpl implements Prefs {
 		editor.putBoolean(PREF_KEY_NOISE_REDUCTION_ENABLED, AppConstants.DEFAULT_NOISE_REDUCTION_ENABLED);
 		editor.putInt(PREF_KEY_HPF_MODE, AppConstants.DEFAULT_HPF_MODE);
 		editor.putInt(PREF_KEY_LPF_MODE, AppConstants.DEFAULT_LPF_MODE);
+		editor.putBoolean(PREF_KEY_NOISE_GATE_ENABLED, AppConstants.DEFAULT_NOISE_GATE_ENABLED);
 		editor.apply();
 	}
 }

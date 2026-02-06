@@ -119,6 +119,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	private ImageButton btnMonitor;
 	private ImageButton btnHpf;
 	private ImageButton btnLpf;
+	private ImageButton btnNoiseGate;
+	private ImageButton btnMicBoost;
 	private boolean isMonitoringActive = false;
 	private ProgressBar progressBar;
 	private SeekBar playProgress;
@@ -196,6 +198,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnMonitor = findViewById(R.id.btn_monitor);
 		btnHpf = findViewById(R.id.btn_hpf);
 		btnLpf = findViewById(R.id.btn_lpf);
+		btnNoiseGate = findViewById(R.id.btn_noise_gate);
+		btnMicBoost = findViewById(R.id.btn_mic_boost);
 		progressBar = findViewById(R.id.progress);
 		playProgress = findViewById(R.id.play_progress);
 		pnlImportProgress = findViewById(R.id.pnl_import_progress);
@@ -220,7 +224,13 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnMonitor.setOnClickListener(this);
 		btnHpf.setOnClickListener(this);
 		btnLpf.setOnClickListener(this);
+		btnNoiseGate.setOnClickListener(this);
+		btnMicBoost.setOnClickListener(this);
+		isMonitoringActive = AudioMonitor.getInstance().isMonitoring();
+		btnMonitor.setAlpha(isMonitoringActive ? 1.0f : 0.5f);
 		updateFilterButtonAlpha();
+		updateNoiseGateButtonAlpha();
+		updateMicBoostButtonAlpha();
 		space = getResources().getDimension(R.dimen.spacing_xnormal);
 
 		playProgress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -310,6 +320,10 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		presenter.updateRecordingDir(getApplicationContext());
 		presenter.loadActiveRecord();
 
+		// Sync monitor button with actual AudioMonitor state
+		isMonitoringActive = AudioMonitor.getInstance().isMonitoring();
+		btnMonitor.setAlpha(isMonitoringActive ? 1.0f : 0.5f);
+
 		// Set up noise reduction listener
 		RecorderContract.Recorder rec = ARApplication.getInjector().provideAudioRecorder(getApplicationContext());
 		if (rec instanceof WavRecorder) {
@@ -387,6 +401,10 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			toggleHpf();
 		} else if (id == R.id.btn_lpf) {
 			toggleLpf();
+		} else if (id == R.id.btn_noise_gate) {
+			toggleNoiseGate();
+		} else if (id == R.id.btn_mic_boost) {
+			toggleMicBoost();
 		}
 	}
 
@@ -416,13 +434,17 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		monitor.setContext(getApplicationContext());
 
 		if (isMonitoringActive) {
+			Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+			monitor.setNoiseGateEnabled(prefs.isNoiseGateEnabled());
+			monitor.setHpfMode(prefs.getHpfMode());
+			monitor.setLpfMode(prefs.getLpfMode());
+			monitor.setGainBoostLevel(prefs.getGainBoostLevel());
 			if (wavRecorder.isRecording()) {
 				// Recording is active — let recording loop feed the monitor
 				wavRecorder.setMonitoringEnabled(true);
 			} else {
 				// Not recording — start standalone monitoring
 				wavRecorder.setMonitoringEnabled(true); // flag for when recording starts
-				Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
 				int sr = prefs.getSettingSampleRate();
 				int ch = prefs.getSettingChannelCount();
 				int deviceId = prefs.getSettingAudioSource();
@@ -459,6 +481,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		int next = (current + 1) % 3; // OFF -> 80 -> 120 -> OFF
 		prefs.setHpfMode(next);
 		wavRecorder.setHpfMode(next);
+		AudioMonitor.getInstance().setHpfMode(next);
 		updateFilterButtonAlpha();
 		int msgRes;
 		switch (next) {
@@ -481,6 +504,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		int next = (current + 1) % 3; // OFF -> 9500 -> 15000 -> OFF
 		prefs.setLpfMode(next);
 		wavRecorder.setLpfMode(next);
+		AudioMonitor.getInstance().setLpfMode(next);
 		updateFilterButtonAlpha();
 		int msgRes;
 		switch (next) {
@@ -495,6 +519,51 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
 		btnHpf.setAlpha(prefs.getHpfMode() != AppConstants.HPF_OFF ? 1.0f : 0.5f);
 		btnLpf.setAlpha(prefs.getLpfMode() != AppConstants.LPF_OFF ? 1.0f : 0.5f);
+	}
+
+	private void toggleNoiseGate() {
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+		AudioMonitor monitor = AudioMonitor.getInstance();
+		boolean enabled = !prefs.isNoiseGateEnabled();
+		prefs.setNoiseGateEnabled(enabled);
+		monitor.setNoiseGateEnabled(enabled);
+		updateNoiseGateButtonAlpha();
+		Toast.makeText(this,
+				enabled ? R.string.noise_gate_on : R.string.noise_gate_off,
+				Toast.LENGTH_SHORT).show();
+	}
+
+	private void updateNoiseGateButtonAlpha() {
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+		btnNoiseGate.setAlpha(prefs.isNoiseGateEnabled() ? 1.0f : 0.5f);
+	}
+
+	private void toggleMicBoost() {
+		RecorderContract.Recorder recorder = ARApplication.getInjector().provideAudioRecorder(getApplicationContext());
+		if (!(recorder instanceof WavRecorder)) {
+			Toast.makeText(this, R.string.filter_wav_only, Toast.LENGTH_SHORT).show();
+			return;
+		}
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+		WavRecorder wavRecorder = (WavRecorder) recorder;
+		int current = prefs.getGainBoostLevel();
+		int next = (current + 1) % 3; // OFF -> 6dB -> 12dB -> OFF
+		prefs.setGainBoostLevel(next);
+		wavRecorder.setGainBoostLevel(next);
+		AudioMonitor.getInstance().setGainBoostLevel(next);
+		updateMicBoostButtonAlpha();
+		int msgRes;
+		switch (next) {
+			case AppConstants.GAIN_BOOST_6DB: msgRes = R.string.mic_boost_6db; break;
+			case AppConstants.GAIN_BOOST_12DB: msgRes = R.string.mic_boost_12db; break;
+			default: msgRes = R.string.mic_boost_off; break;
+		}
+		Toast.makeText(this, msgRes, Toast.LENGTH_SHORT).show();
+	}
+
+	private void updateMicBoostButtonAlpha() {
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+		btnMicBoost.setAlpha(prefs.getGainBoostLevel() != AppConstants.GAIN_BOOST_OFF ? 1.0f : 0.5f);
 	}
 
 	private void showNoiseReductionDialog() {

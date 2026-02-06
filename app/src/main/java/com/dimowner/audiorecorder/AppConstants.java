@@ -167,6 +167,14 @@ public class AppConstants {
 	public static final float LPF_FREQ_15000 = 15000.0f;
 	public static final int DEFAULT_LPF_MODE = LPF_OFF;
 
+	// Noise gate constants (monitor-only)
+	public static final boolean DEFAULT_NOISE_GATE_ENABLED = false;
+	public static final int NOISE_GATE_THRESHOLD_RMS = 400;
+	public static final float NOISE_GATE_ATTACK_MS = 1.0f;
+	public static final float NOISE_GATE_HOLD_MS = 250.0f;
+	public static final float NOISE_GATE_RELEASE_MS = 160.0f;
+	public static final float NOISE_GATE_HYSTERESIS = 0.6f;
+
 	// Noise reduction constants (disabled by default)
 	public static final boolean DEFAULT_NOISE_REDUCTION_ENABLED = false;
 	public static final float DEFAULT_NOISE_REDUCTION_DB = 12.0f;

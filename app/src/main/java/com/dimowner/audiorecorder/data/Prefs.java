@@ -87,5 +87,8 @@ public interface Prefs {
 	void setLpfMode(int mode);
 	int getLpfMode();
 
+	void setNoiseGateEnabled(boolean enabled);
+	boolean isNoiseGateEnabled();
+
 	void resetSettings();
 }
