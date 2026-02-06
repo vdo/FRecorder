@@ -6,10 +6,10 @@ apply plugin: 'kotlin-kapt'
 //apply plugin: 'com.google.gms.google-services'
 
 android {
-	namespace 'com.dimowner.audiorecorder'
+	namespace 'com.vdo.frecorder'
 	compileSdkVersion 35
 	defaultConfig {
-		applicationId "com.dimowner.audiorecorder"
+		applicationId "com.vdo.frecorder"
 		minSdkVersion 23
 		targetSdkVersion 35
 		versionCode 935
@@ -59,13 +59,13 @@ android {
 	productFlavors {
 		debugConfig {
 			dimension "default"
-			applicationId "com.dimowner.audiorecorder.debug"
+			applicationId "com.vdo.frecorder.debug"
 			signingConfig = signingConfigs.dev
 		}
 		releaseConfig {
 			dimension "default"
 			signingConfig = signingConfigs.dev
-			applicationId "com.dimowner.audiorecorder"
+			applicationId "com.vdo.frecorder"
 		}
 	}
 

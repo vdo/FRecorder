@@ -23,7 +23,7 @@
 		android:layout_height="match_parent"
 		android:fitsSystemWindows="true"
 		android:orientation="vertical"
-		tools:context="com.dimowner.audiorecorder.app.main.MainActivity">
+		tools:context="com.vdo.frecorder.app.main.MainActivity">
 
 	<LinearLayout
 			android:id="@+id/toolbar"
@@ -198,14 +198,14 @@
 					android:layout_gravity="center"
 					tools:visibility="visible"/>
 
-			<com.dimowner.audiorecorder.app.widget.WaveformViewNew
+			<com.vdo.frecorder.app.widget.WaveformViewNew
 					android:id="@+id/record"
 					android:layout_width="wrap_content"
 					android:layout_height="@dimen/waveform_height"
 					android:layout_marginBottom="@dimen/notification_btn"
 					/>
 
-			<com.dimowner.audiorecorder.app.widget.RecordingWaveformView
+			<com.vdo.frecorder.app.widget.RecordingWaveformView
 					android:id="@+id/recording_view"
 					android:layout_width="wrap_content"
 					android:layout_height="@dimen/waveform_height"

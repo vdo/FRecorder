@@ -69,23 +69,23 @@
 					android:paddingStart="0dp"
 					android:paddingEnd="1dp"/>
 
-			<com.dimowner.audiorecorder.app.widget.SettingView
+			<com.vdo.frecorder.app.widget.SettingView
 					android:id="@+id/setting_output_format"
 					android:layout_width="match_parent"
 					android:layout_height="wrap_content" />
-			<com.dimowner.audiorecorder.app.widget.SettingView
+			<com.vdo.frecorder.app.widget.SettingView
 					android:id="@+id/setting_bit_depth"
 					android:layout_width="match_parent"
 					android:layout_height="wrap_content" />
-			<com.dimowner.audiorecorder.app.widget.SettingView
+			<com.vdo.frecorder.app.widget.SettingView
 					android:id="@+id/setting_frequency"
 					android:layout_width="match_parent"
 					android:layout_height="wrap_content" />
-			<com.dimowner.audiorecorder.app.widget.SettingView
+			<com.vdo.frecorder.app.widget.SettingView
 					android:id="@+id/setting_bitrate"
 					android:layout_width="match_parent"
 					android:layout_height="wrap_content" />
-			<com.dimowner.audiorecorder.app.widget.SettingView
+			<com.vdo.frecorder.app.widget.SettingView
 					android:id="@+id/setting_channels"
 					android:layout_width="match_parent"
 					android:layout_height="wrap_content" />

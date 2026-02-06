@@ -203,7 +203,7 @@
 			android:layout_height="wrap_content"
 			android:layout_gravity="center"/>
 
-	<com.dimowner.audiorecorder.app.widget.TouchLayout
+	<com.vdo.frecorder.app.widget.TouchLayout
 			android:id="@+id/touch_layout"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
@@ -269,7 +269,7 @@
 					android:layout_height="60dp"
 					>
 
-				<com.dimowner.audiorecorder.app.widget.WaveformViewNew
+				<com.vdo.frecorder.app.widget.WaveformViewNew
 						android:id="@+id/record"
 						android:layout_width="wrap_content"
 						android:layout_height="60dp"
@@ -415,6 +415,6 @@
 
 			</LinearLayout>
 		</LinearLayout>
-	</com.dimowner.audiorecorder.app.widget.TouchLayout>
+	</com.vdo.frecorder.app.widget.TouchLayout>
 
 </FrameLayout>

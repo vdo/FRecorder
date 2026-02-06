@@ -52,7 +52,7 @@
 
 	</LinearLayout>
 
-	<com.dimowner.audiorecorder.app.widget.ChipsView
+	<com.vdo.frecorder.app.widget.ChipsView
 			android:id="@+id/chips_view"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
