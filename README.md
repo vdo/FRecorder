@@ -1,8 +1,14 @@
+<p align="center">
+  <img src="logo.svg" width="128" alt="FRecorder logo"/>
+</p>
+
 # FRecorder
 
 **FRecorder** is a fast, no-nonsense field audio recorder for Android — built for real-world production use. Whether you're on a film set capturing location sound through a USB audio interface, recording interviews, or just need a reliable pocket recorder, FRecorder gets out of your way and lets you hit record.
 
 Fork of [Dimowner/AudioRecorder](https://github.com/Dimowner/AudioRecorder) with significant additions for professional field recording workflows.
+
+![FRecorder screenshot](shot.png)
 
 ## Features
 
@@ -30,15 +36,7 @@ Removed support for **3GP** and **M4A** recording formats. These were low-qualit
 32-bit float recording is not supported because:
 
 - **Hardware limitation** — virtually all Android phone microphones and most USB audio interfaces used with phones have 16-bit or 24-bit ADCs. There is no real 32-bit data coming from the hardware, so a 32-bit file would just be zero-padded 16-bit samples wasting disk space.
-- **No preamp headroom benefit** — 32-bit float is useful in DAWs where you stack gain stages and need headroom to avoid internal clipping. A field recorder captures a single source with a single gain stage; 24-bit already provides 144 dB of dynamic range, far exceeding any real-world recording scenario.
 - **File size** — 32-bit doubles the file size compared to 16-bit with no audible benefit for capture.
-
-## Building
-
-```bash
-export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-./gradlew assembleDebugConfigDebug
-```
 
 ## Credits
 
@@ -48,7 +46,7 @@ FRecorder is based on [Audio Recorder](https://github.com/Dimowner/AudioRecorder
 
 ```
 Copyright 2019 Dmytro Ponomarenko
-Copyright 2025 vdo
+Copyright 2026 vdo
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
