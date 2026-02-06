@@ -13,6 +13,15 @@
 	<string name="noise_reduction_processing">Applying noise reduction…</string>
 	<string name="noise_reduction_done">Noise reduction applied</string>
 	<string name="noise_reduction_failed">Noise reduction failed</string>
+	<string name="hpf">High-pass filter</string>
+	<string name="lpf">Low-pass filter</string>
+	<string name="hpf_off">HPF off</string>
+	<string name="hpf_80">HPF 80 Hz</string>
+	<string name="hpf_120">HPF 120 Hz</string>
+	<string name="lpf_off">LPF off</string>
+	<string name="lpf_9500">LPF 9.5 kHz</string>
+	<string name="lpf_15000">LPF 15 kHz</string>
+	<string name="filter_wav_only">Filters are only available with WAV format</string>
 	<string name="setup">Setup</string>
 	<string name="welcome_1">Welcome to a simple and fast application</string>
 	<string name="title_1">Audio Recorder</string>

@@ -117,6 +117,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	private ImageButton btnShare;
 	private ImageButton btnImport;
 	private ImageButton btnMonitor;
+	private ImageButton btnHpf;
+	private ImageButton btnLpf;
 	private boolean isMonitoringActive = false;
 	private ProgressBar progressBar;
 	private SeekBar playProgress;
@@ -192,6 +194,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnShare = findViewById(R.id.btn_share);
 		btnImport = findViewById(R.id.btn_import);
 		btnMonitor = findViewById(R.id.btn_monitor);
+		btnHpf = findViewById(R.id.btn_hpf);
+		btnLpf = findViewById(R.id.btn_lpf);
 		progressBar = findViewById(R.id.progress);
 		playProgress = findViewById(R.id.play_progress);
 		pnlImportProgress = findViewById(R.id.pnl_import_progress);
@@ -214,6 +218,9 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnImport.setOnClickListener(this);
 		txtName.setOnClickListener(this);
 		btnMonitor.setOnClickListener(this);
+		btnHpf.setOnClickListener(this);
+		btnLpf.setOnClickListener(this);
+		updateFilterButtonAlpha();
 		space = getResources().getDimension(R.dimen.spacing_xnormal);
 
 		playProgress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -376,6 +383,10 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			presenter.onRenameRecordClick();
 		} else if (id == R.id.btn_monitor) {
 			toggleMonitoring();
+		} else if (id == R.id.btn_hpf) {
+			toggleHpf();
+		} else if (id == R.id.btn_lpf) {
+			toggleLpf();
 		}
 	}
 
@@ -434,6 +445,56 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		Toast.makeText(this,
 				isMonitoringActive ? R.string.monitoring_on : R.string.monitoring_off,
 				Toast.LENGTH_SHORT).show();
+	}
+
+	private void toggleHpf() {
+		RecorderContract.Recorder recorder = ARApplication.getInjector().provideAudioRecorder(getApplicationContext());
+		if (!(recorder instanceof WavRecorder)) {
+			Toast.makeText(this, R.string.filter_wav_only, Toast.LENGTH_SHORT).show();
+			return;
+		}
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+		WavRecorder wavRecorder = (WavRecorder) recorder;
+		int current = prefs.getHpfMode();
+		int next = (current + 1) % 3; // OFF -> 80 -> 120 -> OFF
+		prefs.setHpfMode(next);
+		wavRecorder.setHpfMode(next);
+		updateFilterButtonAlpha();
+		int msgRes;
+		switch (next) {
+			case AppConstants.HPF_80: msgRes = R.string.hpf_80; break;
+			case AppConstants.HPF_120: msgRes = R.string.hpf_120; break;
+			default: msgRes = R.string.hpf_off; break;
+		}
+		Toast.makeText(this, msgRes, Toast.LENGTH_SHORT).show();
+	}
+
+	private void toggleLpf() {
+		RecorderContract.Recorder recorder = ARApplication.getInjector().provideAudioRecorder(getApplicationContext());
+		if (!(recorder instanceof WavRecorder)) {
+			Toast.makeText(this, R.string.filter_wav_only, Toast.LENGTH_SHORT).show();
+			return;
+		}
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+		WavRecorder wavRecorder = (WavRecorder) recorder;
+		int current = prefs.getLpfMode();
+		int next = (current + 1) % 3; // OFF -> 9500 -> 15000 -> OFF
+		prefs.setLpfMode(next);
+		wavRecorder.setLpfMode(next);
+		updateFilterButtonAlpha();
+		int msgRes;
+		switch (next) {
+			case AppConstants.LPF_9500: msgRes = R.string.lpf_9500; break;
+			case AppConstants.LPF_15000: msgRes = R.string.lpf_15000; break;
+			default: msgRes = R.string.lpf_off; break;
+		}
+		Toast.makeText(this, msgRes, Toast.LENGTH_SHORT).show();
+	}
+
+	private void updateFilterButtonAlpha() {
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+		btnHpf.setAlpha(prefs.getHpfMode() != AppConstants.HPF_OFF ? 1.0f : 0.5f);
+		btnLpf.setAlpha(prefs.getLpfMode() != AppConstants.LPF_OFF ? 1.0f : 0.5f);
 	}
 
 	private void showNoiseReductionDialog() {

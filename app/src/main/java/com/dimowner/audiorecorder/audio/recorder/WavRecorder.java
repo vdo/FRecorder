@@ -67,6 +67,15 @@ public class WavRecorder implements RecorderContract.Recorder {
 	private int gainBoostLevel = AppConstants.GAIN_BOOST_OFF;
 	private volatile boolean monitoringEnabled = false;
 	private volatile boolean noiseReductionEnabled = false;
+	private volatile int hpfMode = AppConstants.HPF_OFF;
+	private volatile int lpfMode = AppConstants.LPF_OFF;
+
+	// Biquad filter state (per channel not needed since we process interleaved mono/stereo as single stream of samples)
+	private double hpfX1 = 0, hpfX2 = 0, hpfY1 = 0, hpfY2 = 0;
+	private double lpfX1 = 0, lpfX2 = 0, lpfY1 = 0, lpfY2 = 0;
+	private double[] hpfCoeffs = null; // {b0, b1, b2, a1, a2}
+	private double[] lpfCoeffs = null;
+
 	private final AudioMonitor audioMonitor = AudioMonitor.getInstance();
 	private NoiseReductionListener noiseReductionListener;
 
@@ -147,6 +156,7 @@ public class WavRecorder implements RecorderContract.Recorder {
 					audioMonitor.stopStandalone();
 				}
 
+				initFilters();
 				recorder.startRecording();
 				updateTime = System.currentTimeMillis();
 				isRecording.set(true);
@@ -317,14 +327,38 @@ public class WavRecorder implements RecorderContract.Recorder {
 							float multiplier = getGainMultiplier();
 							if (multiplier > 1.0f) {
 								int amplified = (int) (sample * multiplier);
-								// Clamp to prevent clipping
 								if (amplified > Short.MAX_VALUE) amplified = Short.MAX_VALUE;
 								if (amplified < Short.MIN_VALUE) amplified = Short.MIN_VALUE;
 								sample = (short) amplified;
-								// Write back the amplified sample
-								data[i] = (byte) (sample & 0xff);
-								data[i+1] = (byte) ((sample >> 8) & 0xff);
 							}
+
+							// Apply high-pass filter
+							if (hpfCoeffs != null) {
+								double x = sample;
+								double y = hpfCoeffs[0]*x + hpfCoeffs[1]*hpfX1 + hpfCoeffs[2]*hpfX2 - hpfCoeffs[3]*hpfY1 - hpfCoeffs[4]*hpfY2;
+								hpfX2 = hpfX1; hpfX1 = x;
+								hpfY2 = hpfY1; hpfY1 = y;
+								int clamped = (int) Math.round(y);
+								if (clamped > Short.MAX_VALUE) clamped = Short.MAX_VALUE;
+								if (clamped < Short.MIN_VALUE) clamped = Short.MIN_VALUE;
+								sample = (short) clamped;
+							}
+
+							// Apply low-pass filter
+							if (lpfCoeffs != null) {
+								double x = sample;
+								double y = lpfCoeffs[0]*x + lpfCoeffs[1]*lpfX1 + lpfCoeffs[2]*lpfX2 - lpfCoeffs[3]*lpfY1 - lpfCoeffs[4]*lpfY2;
+								lpfX2 = lpfX1; lpfX1 = x;
+								lpfY2 = lpfY1; lpfY1 = y;
+								int clamped = (int) Math.round(y);
+								if (clamped > Short.MAX_VALUE) clamped = Short.MAX_VALUE;
+								if (clamped < Short.MIN_VALUE) clamped = Short.MIN_VALUE;
+								sample = (short) clamped;
+							}
+
+							// Write back the processed sample
+							data[i] = (byte) (sample & 0xff);
+							data[i+1] = (byte) ((sample >> 8) & 0xff);
 
 							sum += Math.abs(sample);
 							shortBuffer.clear();
@@ -512,6 +546,75 @@ public class WavRecorder implements RecorderContract.Recorder {
 
 	public boolean isNoiseReductionEnabled() {
 		return noiseReductionEnabled;
+	}
+
+	public void setHpfMode(int mode) {
+		this.hpfMode = mode;
+	}
+
+	public int getHpfMode() {
+		return hpfMode;
+	}
+
+	public void setLpfMode(int mode) {
+		this.lpfMode = mode;
+	}
+
+	public int getLpfMode() {
+		return lpfMode;
+	}
+
+	private void initFilters() {
+		hpfX1 = hpfX2 = hpfY1 = hpfY2 = 0;
+		lpfX1 = lpfX2 = lpfY1 = lpfY2 = 0;
+		hpfCoeffs = computeHpfCoeffs();
+		lpfCoeffs = computeLpfCoeffs();
+	}
+
+	private double[] computeHpfCoeffs() {
+		float freq;
+		switch (hpfMode) {
+			case AppConstants.HPF_80: freq = AppConstants.HPF_FREQ_80; break;
+			case AppConstants.HPF_120: freq = AppConstants.HPF_FREQ_120; break;
+			default: return null;
+		}
+		return biquadHighPass(freq, sampleRate, 0.7071);
+	}
+
+	private double[] computeLpfCoeffs() {
+		float freq;
+		switch (lpfMode) {
+			case AppConstants.LPF_9500: freq = AppConstants.LPF_FREQ_9500; break;
+			case AppConstants.LPF_15000: freq = AppConstants.LPF_FREQ_15000; break;
+			default: return null;
+		}
+		return biquadLowPass(freq, sampleRate, 0.7071);
+	}
+
+	private static double[] biquadHighPass(double fc, double fs, double Q) {
+		double w0 = 2.0 * Math.PI * fc / fs;
+		double alpha = Math.sin(w0) / (2.0 * Q);
+		double cosw0 = Math.cos(w0);
+		double b0 = (1.0 + cosw0) / 2.0;
+		double b1 = -(1.0 + cosw0);
+		double b2 = (1.0 + cosw0) / 2.0;
+		double a0 = 1.0 + alpha;
+		double a1 = -2.0 * cosw0;
+		double a2 = 1.0 - alpha;
+		return new double[]{b0/a0, b1/a0, b2/a0, a1/a0, a2/a0};
+	}
+
+	private static double[] biquadLowPass(double fc, double fs, double Q) {
+		double w0 = 2.0 * Math.PI * fc / fs;
+		double alpha = Math.sin(w0) / (2.0 * Q);
+		double cosw0 = Math.cos(w0);
+		double b0 = (1.0 - cosw0) / 2.0;
+		double b1 = 1.0 - cosw0;
+		double b2 = (1.0 - cosw0) / 2.0;
+		double a0 = 1.0 + alpha;
+		double a1 = -2.0 * cosw0;
+		double a2 = 1.0 - alpha;
+		return new double[]{b0/a0, b1/a0, b2/a0, a1/a0, a2/a0};
 	}
 
 	public void setNoiseReductionListener(NoiseReductionListener listener) {

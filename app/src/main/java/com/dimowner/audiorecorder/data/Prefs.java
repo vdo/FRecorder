@@ -81,5 +81,11 @@ public interface Prefs {
 	void setNoiseReductionEnabled(boolean enabled);
 	boolean isNoiseReductionEnabled();
 
+	void setHpfMode(int mode);
+	int getHpfMode();
+
+	void setLpfMode(int mode);
+	int getLpfMode();
+
 	void resetSettings();
 }

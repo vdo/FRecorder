@@ -151,6 +151,22 @@ public class AppConstants {
 	public static final float GAIN_BOOST_MULTIPLIER_12DB = 4.0f;  // 10^(12/20) ≈ 3.981
 	public static final int DEFAULT_GAIN_BOOST_LEVEL = GAIN_BOOST_OFF;
 
+	// High-pass filter constants
+	public static final int HPF_OFF = 0;
+	public static final int HPF_80 = 1;
+	public static final int HPF_120 = 2;
+	public static final float HPF_FREQ_80 = 80.0f;
+	public static final float HPF_FREQ_120 = 120.0f;
+	public static final int DEFAULT_HPF_MODE = HPF_OFF;
+
+	// Low-pass filter constants
+	public static final int LPF_OFF = 0;
+	public static final int LPF_9500 = 1;
+	public static final int LPF_15000 = 2;
+	public static final float LPF_FREQ_9500 = 9500.0f;
+	public static final float LPF_FREQ_15000 = 15000.0f;
+	public static final int DEFAULT_LPF_MODE = LPF_OFF;
+
 	// Noise reduction constants (disabled by default)
 	public static final boolean DEFAULT_NOISE_REDUCTION_ENABLED = false;
 	public static final float DEFAULT_NOISE_REDUCTION_DB = 12.0f;

@@ -450,9 +450,11 @@ public class RecordingService extends Service {
 					final AudioDeviceInfo finalAudioDevice = audioDevice;
 					final int gainBoostLevel = prefs.getGainBoostLevel();
 
-					// Set noise reduction preference on WavRecorder
+					// Set noise reduction and filter preferences on WavRecorder
 					if (recorder instanceof WavRecorder) {
 						((WavRecorder) recorder).setNoiseReductionEnabled(prefs.isNoiseReductionEnabled());
+						((WavRecorder) recorder).setHpfMode(prefs.getHpfMode());
+						((WavRecorder) recorder).setLpfMode(prefs.getLpfMode());
 					}
 					recordingsTasks.postRunnable(() -> {
 						try {

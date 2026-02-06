@@ -59,6 +59,8 @@ public class PrefsImpl implements Prefs {
 	private static final String PREF_KEY_SETTING_AUDIO_SOURCE = "setting_audio_source";
 	private static final String PREF_KEY_GAIN_BOOST_LEVEL = "gain_boost_level";
 	private static final String PREF_KEY_NOISE_REDUCTION_ENABLED = "noise_reduction_enabled";
+	private static final String PREF_KEY_HPF_MODE = "hpf_mode";
+	private static final String PREF_KEY_LPF_MODE = "lpf_mode";
 
 	private final SharedPreferences sharedPreferences;
 
@@ -435,6 +437,30 @@ public class PrefsImpl implements Prefs {
 	}
 
 	@Override
+	public void setHpfMode(int mode) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putInt(PREF_KEY_HPF_MODE, mode);
+		editor.apply();
+	}
+
+	@Override
+	public int getHpfMode() {
+		return sharedPreferences.getInt(PREF_KEY_HPF_MODE, AppConstants.DEFAULT_HPF_MODE);
+	}
+
+	@Override
+	public void setLpfMode(int mode) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putInt(PREF_KEY_LPF_MODE, mode);
+		editor.apply();
+	}
+
+	@Override
+	public int getLpfMode() {
+		return sharedPreferences.getInt(PREF_KEY_LPF_MODE, AppConstants.DEFAULT_LPF_MODE);
+	}
+
+	@Override
 	public void resetSettings() {
 		SharedPreferences.Editor editor = sharedPreferences.edit();
 //		editor.putString(PREF_KEY_SETTING_THEME_COLOR, AppConstants.DEFAULT_THEME_COLOR);
@@ -446,6 +472,8 @@ public class PrefsImpl implements Prefs {
 		editor.putInt(PREF_KEY_SETTING_AUDIO_SOURCE, AppConstants.DEFAULT_AUDIO_SOURCE);
 		editor.putInt(PREF_KEY_GAIN_BOOST_LEVEL, AppConstants.DEFAULT_GAIN_BOOST_LEVEL);
 		editor.putBoolean(PREF_KEY_NOISE_REDUCTION_ENABLED, AppConstants.DEFAULT_NOISE_REDUCTION_ENABLED);
+		editor.putInt(PREF_KEY_HPF_MODE, AppConstants.DEFAULT_HPF_MODE);
+		editor.putInt(PREF_KEY_LPF_MODE, AppConstants.DEFAULT_LPF_MODE);
 		editor.apply();
 	}
 }

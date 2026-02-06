@@ -41,6 +41,28 @@
 				android:padding="@dimen/spacing_normal"
 				android:src="@drawable/ic_import"/>
 
+		<ImageButton
+				android:id="@+id/btn_hpf"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:contentDescription="@string/hpf"
+				android:layout_gravity="start"
+				android:background="?android:selectableItemBackgroundBorderless"
+				android:padding="@dimen/spacing_normal"
+				android:alpha="0.5"
+				android:src="@drawable/ic_hpf"/>
+
+		<ImageButton
+				android:id="@+id/btn_lpf"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:contentDescription="@string/lpf"
+				android:layout_gravity="start"
+				android:background="?android:selectableItemBackgroundBorderless"
+				android:padding="@dimen/spacing_normal"
+				android:alpha="0.5"
+				android:src="@drawable/ic_lpf"/>
+
 		<TextView
 				android:layout_width="0dp"
 				android:layout_height="wrap_content"
