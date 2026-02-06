@@ -191,7 +191,7 @@ public class RecordsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 			} else {
 				holder.btnMore.setVisibility(View.VISIBLE);
 			}
-			updateInformation(holder.info, item.getFormat(), item.getSampleRate(), item.getSize());
+			updateInformation(holder.info, item.getFormat(), item.getSampleRate(), item.getSize(), item.getBitrate());
 		} else if (viewHolder.getItemViewType() == ListItem.ITEM_TYPE_DATE) {
 			UniversalViewHolder holder = (UniversalViewHolder) viewHolder;
 			((TextView)holder.view).setText(
@@ -456,28 +456,14 @@ public class RecordsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 		}
 	}
 
-	private void updateInformation(TextView view, String format, int sampleRate, long size) {
-		if (format.equals(AppConstants.FORMAT_3GP)) {
-			view.setText(settingsMapper.formatSize(size) + AppConstants.SEPARATOR
-					+ settingsMapper.convertFormatsToString(format) + AppConstants.SEPARATOR
-					+ settingsMapper.convertSampleRateToString(sampleRate)
-			);
-		} else {
-			switch (format) {
-				case AppConstants.FORMAT_M4A:
-				case AppConstants.FORMAT_WAV:
-					view.setText(settingsMapper.formatSize(size) + AppConstants.SEPARATOR
-							+ settingsMapper.convertFormatsToString(format) + AppConstants.SEPARATOR
-							+ settingsMapper.convertSampleRateToString(sampleRate)// + AppConstants.SEPARATOR
-					);
-					break;
-				default:
-					view.setText(settingsMapper.formatSize(size) + AppConstants.SEPARATOR
-							+ format + AppConstants.SEPARATOR
-							+ settingsMapper.convertSampleRateToString(sampleRate) + AppConstants.SEPARATOR
-					);
-			}
+	private void updateInformation(TextView view, String format, int sampleRate, long size, int bitrate) {
+		String info = settingsMapper.formatSize(size) + AppConstants.SEPARATOR
+				+ settingsMapper.convertFormatsToString(format) + AppConstants.SEPARATOR
+				+ settingsMapper.convertSampleRateToString(sampleRate);
+		if (AppConstants.FORMAT_MP3.equals(format) && bitrate > 0) {
+			info += AppConstants.SEPARATOR + settingsMapper.formatBitrate(bitrate / 1000);
 		}
+		view.setText(info);
 	}
 
 	private boolean hasDateHeader(List<ListItem> data, long time) {

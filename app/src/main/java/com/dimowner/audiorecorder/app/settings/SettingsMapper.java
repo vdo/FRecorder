@@ -442,6 +442,10 @@ public class SettingsMapper {
 				return formats[i];
 			}
 		}
+		// Handle formats not in the settings array (e.g. output formats like MP3, FLAC)
+		if (formatKey != null && !formatKey.isEmpty()) {
+			return formatKey.toUpperCase(Locale.ROOT);
+		}
 		return "";
 	}
 

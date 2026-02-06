@@ -527,6 +527,10 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		boolean enabled = !prefs.isNoiseGateEnabled();
 		prefs.setNoiseGateEnabled(enabled);
 		monitor.setNoiseGateEnabled(enabled);
+		RecorderContract.Recorder rec = ARApplication.getInjector().provideAudioRecorder(getApplicationContext());
+		if (rec instanceof WavRecorder) {
+			((WavRecorder) rec).setNoiseGateEnabled(enabled);
+		}
 		updateNoiseGateButtonAlpha();
 		Toast.makeText(this,
 				enabled ? R.string.noise_gate_on : R.string.noise_gate_off,

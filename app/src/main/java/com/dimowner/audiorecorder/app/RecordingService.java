@@ -455,6 +455,7 @@ public class RecordingService extends Service {
 						((WavRecorder) recorder).setNoiseReductionEnabled(prefs.isNoiseReductionEnabled());
 						((WavRecorder) recorder).setHpfMode(prefs.getHpfMode());
 						((WavRecorder) recorder).setLpfMode(prefs.getLpfMode());
+						((WavRecorder) recorder).setNoiseGateEnabled(prefs.isNoiseGateEnabled());
 					}
 					recordingsTasks.postRunnable(() -> {
 						try {

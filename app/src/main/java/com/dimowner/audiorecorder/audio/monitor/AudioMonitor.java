@@ -452,7 +452,8 @@ public class AudioMonitor {
             }
         }
 
-        if (noiseGateEnabled) {
+        // Only apply noise gate in standalone mode; during recording, WavRecorder already applies it
+        if (noiseGateEnabled && isStandalone.get()) {
             processNoiseGate(pcmData, pcmData.length);
         }
 

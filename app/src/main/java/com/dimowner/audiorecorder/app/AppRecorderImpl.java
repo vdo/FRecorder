@@ -157,6 +157,17 @@ public class AppRecorderImpl implements AppRecorder {
 					}
 					durationMills = 0;
 
+					// Derive format from file extension (authoritative) rather than MediaExtractor
+					// which may report incorrect MIME (e.g. audio/raw for a just-converted FLAC)
+					String fileFormat;
+					String fileName = resultFile.getName();
+					int dotIndex = fileName.lastIndexOf('.');
+					if (dotIndex >= 0) {
+						fileFormat = fileName.substring(dotIndex + 1).toLowerCase();
+					} else {
+						fileFormat = info.getFormat();
+					}
+
 					int[] waveForm = convertRecordingData(recordingData, (int) (duration / 1000000f));
 					final Record record = recordDataSource.getRecordingRecord();
 					if (record != null) {
@@ -170,7 +181,7 @@ public class AppRecorderImpl implements AppRecorder {
 								record.getAdded(),
 								record.getRemoved(),
 								finalPath,
-								info.getFormat(),
+								fileFormat,
 								info.getSize(),
 								info.getSampleRate(),
 								info.getChannelCount(),

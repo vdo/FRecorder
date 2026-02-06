@@ -38,6 +38,10 @@ Removed support for **3GP** and **M4A** recording formats. These were low-qualit
 - **Hardware limitation** — virtually all Android phone microphones and most USB audio interfaces used with phones have 16-bit or 24-bit ADCs. There is no real 32-bit data coming from the hardware, so a 32-bit file would just be zero-padded 16-bit samples wasting disk space.
 - **File size** — 32-bit doubles the file size compared to 16-bit with no audible benefit for capture.
 
+## Disclaimer
+
+This is not a professional-grade recorder — don't expect noise-free recordings from a phone. That said, you can get pretty acceptable results with the noise reduction enabled on save or the noise gate active during monitoring.
+
 ## Credits
 
 FRecorder is based on [Audio Recorder](https://github.com/Dimowner/AudioRecorder) by Dmytro Ponomarenko.

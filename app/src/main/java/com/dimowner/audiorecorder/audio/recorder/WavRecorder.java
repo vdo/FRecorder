@@ -70,6 +70,18 @@ public class WavRecorder implements RecorderContract.Recorder {
 	private volatile int hpfMode = AppConstants.HPF_OFF;
 	private volatile int lpfMode = AppConstants.LPF_OFF;
 
+	// Noise gate state for recording path
+	private volatile boolean noiseGateEnabled = false;
+	private enum GateState { CLOSED, ATTACK, OPEN, HOLD, RELEASE }
+	private GateState gateState = GateState.CLOSED;
+	private float gateEnvelope = 0f;
+	private long holdCounter = 0;
+	private float attackCoeff;
+	private float releaseCoeff;
+	private long holdSamples;
+	private int gateThreshold;
+	private int gateHysteresis;
+
 	// Biquad filter state (per channel not needed since we process interleaved mono/stereo as single stream of samples)
 	private double hpfX1 = 0, hpfX2 = 0, hpfY1 = 0, hpfY2 = 0;
 	private double lpfX1 = 0, lpfX2 = 0, lpfY1 = 0, lpfY2 = 0;
@@ -383,6 +395,11 @@ public class WavRecorder implements RecorderContract.Recorder {
 						}
 						lastVal = (int)(sum/(bufferSize/16));
 
+						// Apply noise gate to recording data
+						if (noiseGateEnabled) {
+							processNoiseGate(data, bufferSize);
+						}
+
 						// Feed audio to monitor if enabled (after gain boost is applied)
 						if (monitoringEnabled && audioMonitor.isMonitoring()) {
 							audioMonitor.feedAudio(data.clone());
@@ -591,6 +608,75 @@ public class WavRecorder implements RecorderContract.Recorder {
 		lpfX1 = lpfX2 = lpfY1 = lpfY2 = 0;
 		hpfCoeffs = computeHpfCoeffs();
 		lpfCoeffs = computeLpfCoeffs();
+		initNoiseGate();
+	}
+
+	private void initNoiseGate() {
+		gateState = GateState.CLOSED;
+		gateEnvelope = 0f;
+		holdCounter = 0;
+		gateThreshold = AppConstants.NOISE_GATE_THRESHOLD_RMS;
+		gateHysteresis = (int) (gateThreshold * AppConstants.NOISE_GATE_HYSTERESIS);
+		float attackMs = AppConstants.NOISE_GATE_ATTACK_MS;
+		float releaseMs = AppConstants.NOISE_GATE_RELEASE_MS;
+		float holdMs = AppConstants.NOISE_GATE_HOLD_MS;
+		attackCoeff = 1000.0f / (sampleRate * attackMs);
+		releaseCoeff = 1000.0f / (sampleRate * releaseMs);
+		holdSamples = (long) (sampleRate * holdMs / 1000.0f);
+	}
+
+	public void setNoiseGateEnabled(boolean enabled) {
+		this.noiseGateEnabled = enabled;
+		if (!enabled) {
+			gateState = GateState.OPEN;
+			gateEnvelope = 1.0f;
+		}
+	}
+
+	public boolean isNoiseGateEnabled() {
+		return noiseGateEnabled;
+	}
+
+	private void processNoiseGate(byte[] pcmData, int length) {
+		long sumSquares = 0;
+		int sampleCount = length / 2;
+		for (int i = 0; i < length; i += 2) {
+			short sample = (short) ((pcmData[i] & 0xFF) | (pcmData[i + 1] << 8));
+			sumSquares += (long) sample * sample;
+		}
+		float rms = (float) Math.sqrt((double) sumSquares / sampleCount);
+
+		switch (gateState) {
+			case CLOSED:
+				if (rms > gateThreshold) gateState = GateState.ATTACK;
+				break;
+			case ATTACK:
+				gateEnvelope += attackCoeff * sampleCount;
+				if (gateEnvelope >= 1.0f) { gateEnvelope = 1.0f; gateState = GateState.OPEN; }
+				break;
+			case OPEN:
+				if (rms < gateHysteresis) { holdCounter = holdSamples; gateState = GateState.HOLD; }
+				break;
+			case HOLD:
+				holdCounter -= sampleCount;
+				if (holdCounter <= 0) gateState = GateState.RELEASE;
+				if (rms > gateThreshold) gateState = GateState.OPEN;
+				break;
+			case RELEASE:
+				gateEnvelope -= releaseCoeff * sampleCount;
+				if (gateEnvelope <= 0f) { gateEnvelope = 0f; gateState = GateState.CLOSED; }
+				if (rms > gateThreshold) gateState = GateState.ATTACK;
+				break;
+		}
+
+		if (gateEnvelope < 1.0f) {
+			for (int i = 0; i < length; i += 2) {
+				short sample = (short) ((pcmData[i] & 0xFF) | (pcmData[i + 1] << 8));
+				sample = (short) (sample * gateEnvelope);
+				pcmData[i] = (byte) (sample & 0xFF);
+				pcmData[i + 1] = (byte) ((sample >> 8) & 0xFF);
+			}
+		}
 	}
 
 	private double[] computeHpfCoeffs() {

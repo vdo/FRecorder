@@ -17,9 +17,7 @@
 package com.dimowner.audiorecorder.audio;
 
 import android.media.MediaCodec;
-import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
-import android.media.MediaMuxer;
 
 import com.dimowner.audiorecorder.AppConstants;
 import com.naman14.androidlame.AndroidLame;
@@ -157,8 +155,10 @@ public class OutputFormatConverter {
 				return;
 			}
 
-			String mp3Path = wavFile.getAbsolutePath().replaceAll("\\.wav$", ".mp3");
-			File mp3File = new File(mp3Path);
+			String basePath = stripAudioExtension(wavFile.getAbsolutePath());
+			File mp3File = new File(basePath + ".mp3");
+			boolean sameFile = wavFile.getAbsolutePath().equals(mp3File.getAbsolutePath());
+			File outputFile = sameFile ? new File(basePath + ".mp3.tmp") : mp3File;
 
 			AndroidLame lame = new LameBuilder()
 					.setInSampleRate(header.sampleRate)
@@ -169,7 +169,7 @@ public class OutputFormatConverter {
 					.build();
 
 			FileInputStream fis = new FileInputStream(wavFile);
-			FileOutputStream fos = new FileOutputStream(mp3File);
+			FileOutputStream fos = new FileOutputStream(outputFile);
 
 			// Skip WAV header
 			fis.skip(44);
@@ -225,8 +225,12 @@ public class OutputFormatConverter {
 			fos.close();
 			lame.close();
 
-			// Delete original WAV file
-			wavFile.delete();
+			if (sameFile) {
+				wavFile.delete();
+				outputFile.renameTo(mp3File);
+			} else {
+				wavFile.delete();
+			}
 
 			if (callback != null) callback.onComplete(mp3File);
 		} catch (Exception e) {
@@ -243,8 +247,10 @@ public class OutputFormatConverter {
 				return;
 			}
 
-			String flacPath = wavFile.getAbsolutePath().replaceAll("\\.wav$", ".flac");
-			File flacFile = new File(flacPath);
+			String basePath = stripAudioExtension(wavFile.getAbsolutePath());
+			File flacFile = new File(basePath + ".flac");
+			boolean sameFile = wavFile.getAbsolutePath().equals(flacFile.getAbsolutePath());
+			File outputFile = sameFile ? new File(basePath + ".flac.tmp") : flacFile;
 
 			MediaFormat format = MediaFormat.createAudioFormat(
 					MediaFormat.MIMETYPE_AUDIO_FLAC,
@@ -256,20 +262,16 @@ public class OutputFormatConverter {
 			MediaCodec codec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_FLAC);
 			codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
 
-			MediaMuxer muxer = new MediaMuxer(flacFile.getAbsolutePath(),
-					MediaMuxer.OutputFormat.MUXER_OUTPUT_WEBM);
-
 			codec.start();
 
 			FileInputStream fis = new FileInputStream(wavFile);
+			FileOutputStream fos = new FileOutputStream(outputFile);
 			fis.skip(44); // Skip WAV header
 
 			int bufferSize = 4096 * header.channels;
 			byte[] readBuffer = new byte[bufferSize];
 			boolean inputDone = false;
 			boolean outputDone = false;
-			int trackIndex = -1;
-			boolean muxerStarted = false;
 
 			long totalBytes = header.dataSize;
 			long processedBytes = 0;
@@ -302,16 +304,12 @@ public class OutputFormatConverter {
 
 				MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
 				int outputBufferIndex = codec.dequeueOutputBuffer(bufferInfo, 10000);
-				if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-					if (!muxerStarted) {
-						trackIndex = muxer.addTrack(codec.getOutputFormat());
-						muxer.start();
-						muxerStarted = true;
-					}
-				} else if (outputBufferIndex >= 0) {
+				if (outputBufferIndex >= 0) {
 					ByteBuffer outputBuffer = codec.getOutputBuffer(outputBufferIndex);
-					if (muxerStarted && bufferInfo.size > 0) {
-						muxer.writeSampleData(trackIndex, outputBuffer, bufferInfo);
+					if (bufferInfo.size > 0) {
+						byte[] encoded = new byte[bufferInfo.size];
+						outputBuffer.get(encoded);
+						fos.write(encoded);
 					}
 					codec.releaseOutputBuffer(outputBufferIndex, false);
 					if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
@@ -321,15 +319,17 @@ public class OutputFormatConverter {
 			}
 
 			fis.close();
+			fos.flush();
+			fos.close();
 			codec.stop();
 			codec.release();
-			if (muxerStarted) {
-				muxer.stop();
-				muxer.release();
-			}
 
-			// Delete original WAV file
-			wavFile.delete();
+			if (sameFile) {
+				wavFile.delete();
+				outputFile.renameTo(flacFile);
+			} else {
+				wavFile.delete();
+			}
 
 			if (callback != null) callback.onComplete(flacFile);
 		} catch (Exception e) {
@@ -403,6 +403,15 @@ public class OutputFormatConverter {
 		raf.seek(0);
 		raf.write(header);
 		raf.close();
+	}
+
+	private static String stripAudioExtension(String path) {
+		for (String ext : AppConstants.SUPPORTED_EXT) {
+			if (path.endsWith("." + ext)) {
+				return path.substring(0, path.length() - ext.length() - 1);
+			}
+		}
+		return path;
 	}
 
 	private static class WavHeader {

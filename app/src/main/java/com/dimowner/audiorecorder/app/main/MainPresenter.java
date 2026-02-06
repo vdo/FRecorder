@@ -168,7 +168,7 @@ public class MainPresenter implements MainContract.UserActionsListener {
 						view.showDuration(TimeUtils.formatTimeIntervalHourMinSec2(songDuration / 1000));
 						view.showOptionsMenu();
 					}
-					updateInformation(rec.getFormat(), rec.getSampleRate(), rec.getSize());
+					updateInformation(rec.getFormat(), rec.getSampleRate(), rec.getSize(), rec.getBitrate());
 					if (view != null) {
 						view.keepScreenOn(false);
 						view.hideProgress();
@@ -566,7 +566,7 @@ public class MainPresenter implements MainContract.UserActionsListener {
 							view.showDuration(TimeUtils.formatTimeIntervalHourMinSec2(songDuration / 1000));
 							view.showOptionsMenu();
 							view.hideProgress();
-							updateInformation(rec.getFormat(), rec.getSampleRate(), rec.getSize());
+							updateInformation(rec.getFormat(), rec.getSampleRate(), rec.getSize(), rec.getBitrate());
 						}
 					});
 				} else {
@@ -691,30 +691,18 @@ public class MainPresenter implements MainContract.UserActionsListener {
 	}
 
 	private void updateInformation(String format, int sampleRate, long size) {
-		if (format.equals(AppConstants.FORMAT_3GP)) {
-			if (view != null) {
-				view.showInformation(settingsMapper.formatSize(size) + AppConstants.SEPARATOR
-						+ settingsMapper.convertFormatsToString(format) + AppConstants.SEPARATOR
-						+ settingsMapper.convertSampleRateToString(sampleRate)
-				);
+		updateInformation(format, sampleRate, size, 0);
+	}
+
+	private void updateInformation(String format, int sampleRate, long size, int bitrate) {
+		if (view != null) {
+			String info = settingsMapper.formatSize(size) + AppConstants.SEPARATOR
+					+ settingsMapper.convertFormatsToString(format) + AppConstants.SEPARATOR
+					+ settingsMapper.convertSampleRateToString(sampleRate);
+			if (AppConstants.FORMAT_MP3.equals(format) && bitrate > 0) {
+				info += AppConstants.SEPARATOR + settingsMapper.formatBitrate(bitrate / 1000);
 			}
-		} else {
-			if (view != null) {
-				switch (format) {
-					case AppConstants.FORMAT_M4A:
-					case AppConstants.FORMAT_WAV:
-						view.showInformation(settingsMapper.formatSize(size) + AppConstants.SEPARATOR
-								+ settingsMapper.convertFormatsToString(format) + AppConstants.SEPARATOR
-								+ settingsMapper.convertSampleRateToString(sampleRate)
-						);
-						break;
-					default:
-						view.showInformation(settingsMapper.formatSize(size) + AppConstants.SEPARATOR
-								+ format + AppConstants.SEPARATOR
-								+ settingsMapper.convertSampleRateToString(sampleRate)
-						);
-				}
-			}
+			view.showInformation(info);
 		}
 	}
 
@@ -827,7 +815,7 @@ public class MainPresenter implements MainContract.UserActionsListener {
 									view.hideProgress();
 									view.hideImportProgress();
 									view.showOptionsMenu();
-									updateInformation(rec.getFormat(), rec.getSampleRate(), rec.getSize());
+									updateInformation(rec.getFormat(), rec.getSampleRate(), rec.getSize(), rec.getBitrate());
 								}
 							});
 							decodeRecord(rec.getId());

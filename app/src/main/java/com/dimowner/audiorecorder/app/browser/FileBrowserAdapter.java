@@ -138,7 +138,7 @@ public class FileBrowserAdapter extends RecyclerView.Adapter<FileBrowserAdapter.
 				holder.status.setText(R.string.found_in_the_app);
 				holder.status.setBackground(RippleUtils.createShape(colorFound, radius));
 			}
-			updateInformation(holder.info, rec.getFormat(), rec.getSampleRate(), rec.getSize(), rec.getDuration()/1000);
+			updateInformation(holder.info, rec.getFormat(), rec.getSampleRate(), rec.getSize(), rec.getDuration()/1000, rec.getBitrate());
 			if (rec.isInDatabase() || rec.isInTrash()) {
 				holder.btnDelete.setVisibility(View.GONE);
 				holder.btnImport.setVisibility(View.GONE);
@@ -174,31 +174,15 @@ public class FileBrowserAdapter extends RecyclerView.Adapter<FileBrowserAdapter.
 		return data.size();
 	}
 
-	private void updateInformation(TextView view, String format, int sampleRate, long size, long duration) {
-		if (format.equals(AppConstants.FORMAT_3GP)) {
-			view.setText(settingsMapper.formatSize(size) + AppConstants.SEPARATOR
-					+ settingsMapper.convertFormatsToString(format) + AppConstants.SEPARATOR
-					+ settingsMapper.convertSampleRateToString(sampleRate) + AppConstants.SEPARATOR
-					+ TimeUtils.formatTimeIntervalHourMinSec2(duration)
-			);
-		} else {
-			switch (format) {
-				case AppConstants.FORMAT_M4A:
-				case AppConstants.FORMAT_WAV:
-					view.setText(settingsMapper.formatSize(size) + AppConstants.SEPARATOR
-							+ settingsMapper.convertFormatsToString(format) + AppConstants.SEPARATOR
-							+ settingsMapper.convertSampleRateToString(sampleRate) + AppConstants.SEPARATOR
-							+ TimeUtils.formatTimeIntervalHourMinSec2(duration)
-					);
-					break;
-				default:
-					view.setText(settingsMapper.formatSize(size) + AppConstants.SEPARATOR
-							+ format + AppConstants.SEPARATOR
-							+ settingsMapper.convertSampleRateToString(sampleRate) + AppConstants.SEPARATOR
-							+ TimeUtils.formatTimeIntervalHourMinSec2(duration)
-					);
-			}
+	private void updateInformation(TextView view, String format, int sampleRate, long size, long duration, int bitrate) {
+		String info = settingsMapper.formatSize(size) + AppConstants.SEPARATOR
+				+ settingsMapper.convertFormatsToString(format) + AppConstants.SEPARATOR
+				+ settingsMapper.convertSampleRateToString(sampleRate);
+		if (AppConstants.FORMAT_MP3.equals(format) && bitrate > 0) {
+			info += AppConstants.SEPARATOR + settingsMapper.formatBitrate(bitrate / 1000);
 		}
+		info += AppConstants.SEPARATOR + TimeUtils.formatTimeIntervalHourMinSec2(duration);
+		view.setText(info);
 	}
 
 	public void setOnItemClickListener(OnItemClickListener onItemClickListener) {

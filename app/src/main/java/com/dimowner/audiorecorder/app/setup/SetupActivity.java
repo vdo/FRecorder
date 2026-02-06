@@ -174,6 +174,8 @@ public class SetupActivity extends Activity implements SetupContract.View, View.
 		requestRecordingPermission();
 	}
 
+	private boolean ignoreThemeColorSelection = false;
+
 	private void initThemeColorSelector() {
 		Spinner themeColor = findViewById(R.id.themeColor);
 		List<AppSpinnerAdapter.ThemeItem> items = new ArrayList<>();
@@ -184,7 +186,6 @@ public class SetupActivity extends Activity implements SetupContract.View, View.
 		}
 		AppSpinnerAdapter adapter = new AppSpinnerAdapter(SetupActivity.this,
 				R.layout.list_item_spinner, R.id.txtItem, items, R.drawable.ic_color_lens);
-		themeColor.setAdapter(adapter);
 
 		onThemeColorChangeListener = colorKey -> {
 			setTheme(colorMap.getAppThemeResource());
@@ -192,12 +193,16 @@ public class SetupActivity extends Activity implements SetupContract.View, View.
 		};
 		colorMap.addOnThemeColorChangeListener(onThemeColorChangeListener);
 
+		ignoreThemeColorSelection = true;
+		themeColor.setAdapter(adapter);
 		int selected = SettingsMapper.colorKeyToPosition(colorMap.getSelected());
-		if (selected != themeColor.getSelectedItemPosition()) {
-			themeColor.setSelection(selected);
-		}
+		themeColor.setSelection(selected);
 		themeColor.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
 			@Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+				if (ignoreThemeColorSelection) {
+					ignoreThemeColorSelection = false;
+					return;
+				}
 				String colorKey = SettingsMapper.positionToColorKey(position);
 				colorMap.updateColorMap(colorKey);
 				presenter.setSettingThemeColor(colorKey);

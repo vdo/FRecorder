@@ -8,7 +8,7 @@ fun recordToMoveRecordsItem(settingsMapper: SettingsMapper, item: Record): MoveR
 	return MoveRecordsItem(
 		item.id,
 		item.name,
-		formatRecordInformation(settingsMapper, item.format, item.sampleRate, item.size)
+		formatRecordInformation(settingsMapper, item.format, item.sampleRate, item.size, item.bitrate)
 	)
 }
 

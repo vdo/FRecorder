@@ -74,7 +74,20 @@ public class FileRepositoryImpl implements FileRepository {
 				recordName = FileUtil.generateRecordNameMills();
 				break;
 		}
-		recordFile = FileUtil.createFile(recordDirectory, FileUtil.addExtension(recordName, AppConstants.FORMAT_WAV));
+		String outputFormat = prefs.getSettingOutputFormat();
+		String extension;
+		switch (outputFormat) {
+			case AppConstants.OUTPUT_FORMAT_MP3:
+				extension = AppConstants.FORMAT_MP3;
+				break;
+			case AppConstants.OUTPUT_FORMAT_FLAC:
+				extension = AppConstants.FORMAT_FLAC;
+				break;
+			default:
+				extension = AppConstants.FORMAT_WAV;
+				break;
+		}
+		recordFile = FileUtil.createFile(recordDirectory, FileUtil.addExtension(recordName, extension));
 
 		if (recordFile != null) {
 			return recordFile;
