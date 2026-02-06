@@ -24,7 +24,9 @@ import com.dimowner.audiorecorder.BackgroundQueue;
 import com.dimowner.audiorecorder.IntArrayList;
 import com.dimowner.audiorecorder.app.info.RecordInfo;
 import com.dimowner.audiorecorder.audio.AudioDecoder;
+import com.dimowner.audiorecorder.audio.OutputFormatConverter;
 import com.dimowner.audiorecorder.audio.recorder.RecorderContract;
+import com.dimowner.audiorecorder.data.Prefs;
 import com.dimowner.audiorecorder.data.RecordDataSource;
 import com.dimowner.audiorecorder.data.database.LocalRepository;
 import com.dimowner.audiorecorder.data.database.Record;
@@ -46,6 +48,7 @@ public class AppRecorderImpl implements AppRecorder {
 
 	private RecorderContract.Recorder audioRecorder;
 	private final BackgroundQueue recordingsTasks;
+	private final Prefs prefs;
 
 	private final LocalRepository localRepository;
 	private final RecorderContract.RecorderCallback recorderCallback;
@@ -63,12 +66,13 @@ public class AppRecorderImpl implements AppRecorder {
 			RecorderContract.Recorder recorder,
 			LocalRepository localRep,
 			BackgroundQueue tasks,
-			RecordDataSource recordDataSource
+			RecordDataSource recordDataSource,
+			Prefs prefs
 	) {
 		if (instance == null) {
 			synchronized (AppRecorderImpl.class) {
 				if (instance == null) {
-					instance = new AppRecorderImpl(recorder, localRep, tasks, recordDataSource);
+					instance = new AppRecorderImpl(recorder, localRep, tasks, recordDataSource, prefs);
 				}
 			}
 		}
@@ -79,11 +83,13 @@ public class AppRecorderImpl implements AppRecorder {
 			RecorderContract.Recorder recorder,
 			LocalRepository localRep,
 			BackgroundQueue tasks,
-			RecordDataSource recordDataSource
+			RecordDataSource recordDataSource,
+			Prefs prefs
 	) {
 		this.audioRecorder = recorder;
 		this.localRepository = localRep;
 		this.recordingsTasks = tasks;
+		this.prefs = prefs;
 		this.appCallbacks = new ArrayList<>();
 		this.recordingData = new IntArrayList();
 		this.apmpPool = new IntArrayList();
@@ -118,7 +124,33 @@ public class AppRecorderImpl implements AppRecorder {
 			public void onStopRecord(final File output) {
 				stopRecordingTimer();
 				recordingsTasks.postRunnable(() -> {
-					RecordInfo info = AudioDecoder.readRecordInfo(output);
+					// Convert output format if needed (WAV -> MP3/FLAC, or WAV bit depth change)
+					String outputFormat = prefs.getSettingOutputFormat();
+					int bitDepth = prefs.getSettingBitDepth();
+					final File[] finalOutput = {output};
+					final boolean[] conversionDone = {false};
+
+					if (!outputFormat.equals(AppConstants.OUTPUT_FORMAT_WAV) || bitDepth != AppConstants.BIT_DEPTH_16) {
+						OutputFormatConverter.convert(output, outputFormat, bitDepth, new OutputFormatConverter.ConversionCallback() {
+							@Override public void onProgress(int percent) { }
+							@Override public void onComplete(File outputFile) {
+								finalOutput[0] = outputFile;
+								conversionDone[0] = true;
+							}
+							@Override public void onError(String message) {
+								Timber.e("Output format conversion failed: %s. Keeping WAV.", message);
+								finalOutput[0] = output;
+								conversionDone[0] = true;
+							}
+						});
+					} else {
+						conversionDone[0] = true;
+					}
+
+					// Wait for conversion (it runs synchronously on this background thread)
+					File resultFile = finalOutput[0];
+
+					RecordInfo info = AudioDecoder.readRecordInfo(resultFile);
 					long duration = info.getDuration();
 					if (duration <= 0) {
 						duration = durationMills;
@@ -128,6 +160,8 @@ public class AppRecorderImpl implements AppRecorder {
 					int[] waveForm = convertRecordingData(recordingData, (int) (duration / 1000000f));
 					final Record record = recordDataSource.getRecordingRecord();
 					if (record != null) {
+						// Update path if format changed (e.g. .wav -> .mp3)
+						String finalPath = resultFile.getAbsolutePath();
 						final Record update = new Record(
 								record.getId(),
 								record.getName(),
@@ -135,7 +169,7 @@ public class AppRecorderImpl implements AppRecorder {
 								record.getCreated(),
 								record.getAdded(),
 								record.getRemoved(),
-								record.getPath(),
+								finalPath,
 								info.getFormat(),
 								info.getSize(),
 								info.getSampleRate(),
@@ -147,15 +181,18 @@ public class AppRecorderImpl implements AppRecorder {
 						if (localRepository.updateRecord(update)) {
 							recordingData.clear();
 							final Record rec = localRepository.getRecord(update.getId());
-							AndroidUtils.runOnUIThread(() -> onRecordingStopped(output, rec));
+							final File finalResultFile = resultFile;
+							AndroidUtils.runOnUIThread(() -> onRecordingStopped(finalResultFile, rec));
 						} else {
 							//Try to update record again if failed.
 							if (localRepository.updateRecord(update)) {
 								recordingData.clear();
 								final Record rec = localRepository.getRecord(update.getId());
-								AndroidUtils.runOnUIThread(() -> onRecordingStopped(output, rec));
+								final File finalResultFile2 = resultFile;
+								AndroidUtils.runOnUIThread(() -> onRecordingStopped(finalResultFile2, rec));
 							} else {
-								AndroidUtils.runOnUIThread(() -> onRecordingStopped(output, record));
+								final File finalResultFile3 = resultFile;
+								AndroidUtils.runOnUIThread(() -> onRecordingStopped(finalResultFile3, record));
 							}
 						}
 						recordDataSource.setRecordingRecord(null);

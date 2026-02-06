@@ -7,16 +7,31 @@ Fork of [Dimowner/AudioRecorder](https://github.com/Dimowner/AudioRecorder) with
 ## Features
 
 - **USB Audio Input** — Record from external USB microphones, audio interfaces, and other USB audio devices. Automatically detects connected devices and lets you select them as the recording source.
-- **Live Monitoring** — Listen to what's being recorded in real-time through Bluetooth headphones or the built-in speaker. Intelligently routes playback to the correct output device when using external USB audio. Toggle on/off during recording.
+- **Live Monitoring** — Listen to what's being recorded in real-time through Bluetooth headphones or the built-in speaker. Toggle on/off before or during recording.
 - **Gain Boost** — Adjustable input gain (+6 dB / +12 dB) to amplify quiet sources. Applied in real-time with clipping protection.
 - **Noise Reduction** — Optional spectral noise reduction applied on save (WAV only).
 - **High/Low-Pass Filters** — Configurable HPF (80/120 Hz) and LPF (9.5/15 kHz) for cleaning up recordings.
 - **Noise Gate** — Monitor-only noise gate to cut background noise during live monitoring.
-- **Flexible Formats** — M4A (AAC), WAV (uncompressed), and 3GP. Configurable sample rate (8–48 kHz), bitrate, and mono/stereo.
+- **Save Formats** — WAV (16-bit or 24-bit), MP3 (320 kbps via LAME), and FLAC (lossless). Recording is always done internally in WAV for maximum quality; conversion happens on save.
+- **Bit Depth** — Selectable 16-bit or 24-bit WAV output.
+- **Configurable Audio** — Sample rate (8–48 kHz), mono/stereo, audio input device selection.
+- **Setup Wizard** — First-run wizard with output format, bit depth, sample rate, channels, audio input selection, and recording permission request.
 - **Fast Startup** — Optimized to launch quickly so you never miss a take.
 - **Visual Waveform** — Real-time waveform display during recording and playback.
 - **File Management** — Rename, share, import, bookmark, trash/restore recordings. Built-in file browser.
 - **Themes** — Multiple color themes to personalize the app.
+
+## Format Changes from Upstream
+
+Removed support for **3GP** and **M4A** recording formats. These were low-quality legacy formats not suited for field recording. All recording is now done in WAV internally, with the user choosing the output/save format (WAV, MP3, FLAC).
+
+### Why no 32-bit float?
+
+32-bit float recording is not supported because:
+
+- **Hardware limitation** — virtually all Android phone microphones and most USB audio interfaces used with phones have 16-bit or 24-bit ADCs. There is no real 32-bit data coming from the hardware, so a 32-bit file would just be zero-padded 16-bit samples wasting disk space.
+- **No preamp headroom benefit** — 32-bit float is useful in DAWs where you stack gain stages and need headroom to avoid internal clipping. A field recorder captures a single source with a single gain stage; 24-bit already provides 144 dB of dynamic range, far exceeding any real-world recording scenario.
+- **File size** — 32-bit doubles the file size compared to 16-bit with no audible benefit for capture.
 
 ## Building
 

@@ -45,6 +45,8 @@ public class SetupPresenter implements SetupContract.UserActionsListener {
 			view.showNamingFormat(prefs.getSettingNamingFormat());
 			view.showRecordingBitrate(prefs.getSettingBitrate());
 			view.showSampleRate(prefs.getSettingSampleRate());
+			view.showOutputFormat(prefs.getSettingOutputFormat());
+			view.showBitDepth(prefs.getSettingBitDepth());
 			updateSizePerMin();
 		}
 	}
@@ -152,27 +154,26 @@ public class SetupPresenter implements SetupContract.UserActionsListener {
 	public void setSettingRecordingFormat(String formatKey) {
 		prefs.setSettingRecordingFormat(formatKey);
 		updateRecordingFormat(formatKey);
-		switch (formatKey) {
-			case AppConstants.FORMAT_WAV:
-				if (view != null) {
-					view.showInformation(R.string.info_wav);
-				}
-				break;
-			case AppConstants.FORMAT_M4A:
-				if (view != null) {
-					view.showInformation(R.string.info_m4a);
-				}
-				break;
-			case AppConstants.FORMAT_3GP:
-				if (view != null) {
-					view.showInformation(R.string.info_3gp);
-				}
-				break;
-		}
 		if (view != null) {
+			view.showInformation(R.string.info_wav);
 			view.updateRecordingInfo(formatKey);
 		}
 		updateSizePerMin();
+	}
+
+	@Override
+	public void setSettingOutputFormat(String outputFormatKey) {
+		prefs.setSettingOutputFormat(outputFormatKey);
+	}
+
+	@Override
+	public void setSettingBitDepth(int bitDepth) {
+		prefs.setSettingBitDepth(bitDepth);
+	}
+
+	@Override
+	public void setSettingAudioSource(int deviceId) {
+		prefs.setSettingAudioSource(deviceId);
 	}
 
 	@Override
@@ -207,53 +208,23 @@ public class SetupPresenter implements SetupContract.UserActionsListener {
 	}
 
 	private void updateRecordingFormat(String formatKey) {
-		switch (formatKey) {
-			case AppConstants.FORMAT_3GP:
-			case AppConstants.FORMAT_WAV:
-				if (view != null) {
-					view.hideBitrateSelector();
-					view.showInformation(R.string.info_wav);
-				}
-				break;
-			case AppConstants.FORMAT_M4A:
-				if (view != null) {
-					view.showInformation(R.string.info_m4a);
-				}
-			default:
-				if (view != null) {
-					view.showBitrateSelector();
-				}
+		if (view != null) {
+			view.hideBitrateSelector();
+			view.showInformation(R.string.info_wav);
 		}
 	}
 
 	private void updateSizePerMin() {
 		String format = prefs.getSettingRecordingFormat();
 		int sampleRate = prefs.getSettingSampleRate();
-		if (format.equals(AppConstants.FORMAT_3GP)) {
-			view.showSizePerMin(
-					decimalFormat.format(
-							sizePerMin(format, sampleRate, AppConstants.RECORD_ENCODING_BITRATE_12000,
-									AppConstants.RECORD_AUDIO_MONO) / 1000000f
-					)
-			);
-		} else {
-			int bitrate = prefs.getSettingBitrate();
-			int channelsCount = prefs.getSettingChannelCount();
-			if (view != null) {
-				view.showSizePerMin(decimalFormat.format(sizePerMin(format, sampleRate, bitrate, channelsCount) / 1000000f));
-			}
+		int channelsCount = prefs.getSettingChannelCount();
+		if (view != null) {
+			view.showSizePerMin(decimalFormat.format(sizePerMin(format, sampleRate, 0, channelsCount) / 1000000f));
 		}
 	}
 
 	private long sizePerMin(String recordingFormat, int sampleRate, int bitrate, int channels) {
-		switch (recordingFormat) {
-			case AppConstants.FORMAT_M4A:
-			case AppConstants.FORMAT_3GP:
-				return 60 * (bitrate/8);
-			case AppConstants.FORMAT_WAV:
-				return 60 * (sampleRate * channels * 2);
-			default:
-				return 0;
-		}
+		// Recording is always WAV internally
+		return 60 * ((long) sampleRate * channels * 2);
 	}
 }

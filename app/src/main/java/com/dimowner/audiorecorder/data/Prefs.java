@@ -72,6 +72,12 @@ public interface Prefs {
 	void setSettingChannelCount(int count);
 	int getSettingChannelCount();
 
+	void setSettingOutputFormat(String outputFormat);
+	String getSettingOutputFormat();
+
+	void setSettingBitDepth(int bitDepth);
+	int getSettingBitDepth();
+
 	void setSettingAudioSource(int deviceId);
 	int getSettingAudioSource();
 

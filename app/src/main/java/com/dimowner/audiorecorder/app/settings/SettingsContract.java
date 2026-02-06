@@ -48,6 +48,10 @@ public class SettingsContract {
 
 		void showChannelCount(int count);
 
+		void showOutputFormat(String outputFormatKey);
+
+		void showBitDepth(int bitDepth);
+
 		void showAudioSourceSetting(int selectedDeviceId, List<AudioDeviceInfo> devices);
 
 		void showGainBoostLevel(int level);
@@ -103,6 +107,10 @@ public class SettingsContract {
 		void setSettingNamingFormat(String namingKey);
 
 		void setSettingRecordingFormat(String formatKey);
+
+		void setSettingOutputFormat(String outputFormatKey);
+
+		void setSettingBitDepth(int bitDepth);
 
 		void setSettingAudioSource(int deviceId);
 

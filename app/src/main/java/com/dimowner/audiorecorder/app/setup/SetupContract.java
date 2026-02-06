@@ -32,6 +32,10 @@ public class SetupContract {
 
 		void showRecordingFormat(String formatKey);
 
+		void showOutputFormat(String outputFormatKey);
+
+		void showBitDepth(int bitDepth);
+
 		void showBitrateSelector();
 
 		void hideBitrateSelector();
@@ -58,6 +62,12 @@ public class SetupContract {
 		void setSettingNamingFormat(String namingKey);
 
 		void setSettingRecordingFormat(String formatKey);
+
+		void setSettingOutputFormat(String outputFormatKey);
+
+		void setSettingBitDepth(int bitDepth);
+
+		void setSettingAudioSource(int deviceId);
 
 		void executeFirstRun();
 

@@ -109,6 +109,9 @@ dependencies {
 	implementation "com.jakewharton.timber:timber:$timber"
 	implementation "androidx.recyclerview:recyclerview:$androidX"
 
+	// MP3 encoding via LAME
+	implementation 'com.github.naman14:TAndroidLame:1.1'
+
 	testImplementation("junit:junit:4.13.2")
 	testImplementation("io.mockk:mockk:1.13.13")
 

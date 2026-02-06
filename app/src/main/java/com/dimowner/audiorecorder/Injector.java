@@ -98,7 +98,7 @@ public class Injector {
 
 	public AppRecorder provideAppRecorder(Context context) {
 		return AppRecorderImpl.getInstance(provideAudioRecorder(context), provideLocalRepository(context),
-				provideLoadingTasksQueue(), provideRecordDataSource(context));
+				provideLoadingTasksQueue(), provideRecordDataSource(context), providePrefs(context));
 	}
 
 	public AudioWaveformVisualization provideAudioWaveformVisualization() {
@@ -160,15 +160,7 @@ public class Injector {
 	}
 
 	public RecorderContract.Recorder provideAudioRecorder(Context context) {
-		switch (providePrefs(context).getSettingRecordingFormat()) {
-			default:
-			case AppConstants.FORMAT_M4A:
-				return AudioRecorder.getInstance();
-			case AppConstants.FORMAT_WAV:
-				return WavRecorder.getInstance();
-			case AppConstants.FORMAT_3GP:
-				return ThreeGpRecorder.getInstance();
-		}
+		return WavRecorder.getInstance();
 	}
 
 	public AudioDeviceManager provideAudioDeviceManager(Context context) {

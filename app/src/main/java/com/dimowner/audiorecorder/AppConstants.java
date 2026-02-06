@@ -56,6 +56,16 @@ public class AppConstants {
 
 	public static final String[] SUPPORTED_EXT = new String[]{"mp3", "wav", "3gpp", "3gp", "amr", "aac", "m4a", "mp4", "ogg", "flac"};
 
+	// Output format constants (format the final file is saved as)
+	public static final String OUTPUT_FORMAT_WAV = "wav";
+	public static final String OUTPUT_FORMAT_MP3 = "mp3";
+	public static final String OUTPUT_FORMAT_FLAC = "flac";
+
+	// Bit depth constants for WAV output
+	public static final int BIT_DEPTH_16 = 16;
+	public static final int BIT_DEPTH_24 = 24;
+	public static final int DEFAULT_BIT_DEPTH = BIT_DEPTH_24;
+
 	public static final String FORMAT_M4A = "m4a";
 	public static final String FORMAT_WAV = "wav";
 	public static final String FORMAT_3GP = "3gp";
@@ -127,6 +137,7 @@ public class AppConstants {
 	public static final int RECORD_ENCODING_BITRATE_192000 = 192000;
 	public static final int RECORD_ENCODING_BITRATE_256000 = 256000;
 	public static final int RECORD_ENCODING_BITRATE_288000 = 288000;
+	public static final int RECORD_ENCODING_BITRATE_320000 = 320000;
 
 	public static final int SORT_DATE = 1;
 	public static final int SORT_NAME = 2;
@@ -184,9 +195,10 @@ public class AppConstants {
 	public final static int RECORD_MAX_DURATION = 14400000; // 240 min 4 hours
 
 	public static final String DEFAULT_THEME_COLOR = THEME_BLACK;
-	public static final String DEFAULT_RECORDING_FORMAT = FORMAT_M4A;
+	public static final String DEFAULT_RECORDING_FORMAT = FORMAT_WAV;
+	public static final String DEFAULT_OUTPUT_FORMAT = OUTPUT_FORMAT_WAV;
 	public static final String DEFAULT_NAME_FORMAT = NAME_FORMAT_RECORD;
-	public static final int DEFAULT_RECORD_SAMPLE_RATE = RECORD_SAMPLE_RATE_44100;
+	public static final int DEFAULT_RECORD_SAMPLE_RATE = RECORD_SAMPLE_RATE_48000;
 	public static final int DEFAULT_RECORD_ENCODING_BITRATE = RECORD_ENCODING_BITRATE_128000;
 	public static final int DEFAULT_CHANNEL_COUNT = RECORD_AUDIO_STEREO;
 

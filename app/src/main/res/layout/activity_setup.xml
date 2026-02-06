@@ -70,7 +70,11 @@
 					android:paddingEnd="1dp"/>
 
 			<com.dimowner.audiorecorder.app.widget.SettingView
-					android:id="@+id/setting_recording_format"
+					android:id="@+id/setting_output_format"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content" />
+			<com.dimowner.audiorecorder.app.widget.SettingView
+					android:id="@+id/setting_bit_depth"
 					android:layout_width="match_parent"
 					android:layout_height="wrap_content" />
 			<com.dimowner.audiorecorder.app.widget.SettingView
@@ -85,6 +89,25 @@
 					android:id="@+id/setting_channels"
 					android:layout_width="match_parent"
 					android:layout_height="wrap_content" />
+
+			<TextView
+					style="@style/Text.NormalLabel"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:text="@string/audio_source"
+					android:layout_marginTop="@dimen/spacing_normal"
+					android:layout_marginStart="@dimen/spacing_normal"
+					android:layout_marginEnd="@dimen/spacing_normal"
+					/>
+
+			<Spinner
+					android:id="@+id/setup_audio_source_selector"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginStart="@dimen/spacing_small"
+					android:layout_marginEnd="@dimen/spacing_small"
+					android:paddingStart="0dp"
+					android:paddingEnd="1dp"/>
 
 			<LinearLayout
 					android:layout_width="match_parent"
@@ -125,46 +148,6 @@
 			android:paddingEnd="@dimen/spacing_small"
 			android:background="@color/white_transparent_80"
 			android:orientation="vertical">
-		<LinearLayout
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:orientation="horizontal">
-
-			<ImageView
-					android:layout_width="wrap_content"
-					android:layout_height="wrap_content"
-					android:layout_gravity="center_vertical"
-					android:src="@drawable/ic_info" />
-				<LinearLayout
-						android:layout_width="match_parent"
-						android:layout_height="wrap_content"
-						android:orientation="vertical">
-					<TextView
-							android:id="@+id/txt_size_per_min"
-							android:layout_width="wrap_content"
-							android:layout_height="wrap_content"
-							android:layout_marginTop="@dimen/spacing_small"
-							android:layout_marginStart="@dimen/spacing_small"
-							android:layout_marginEnd="@dimen/spacing_xsmall"
-							android:layout_gravity="center_vertical"
-							android:fontFamily="sans-serif-light"
-							android:textColor="@color/white"
-							android:textSize="@dimen/text_medium"
-							tools:text="5 Mb/min" />
-					<TextView
-							android:id="@+id/txt_information"
-							android:layout_width="match_parent"
-							android:layout_height="wrap_content"
-							tools:text="WAV is uncompressed format and it takes a lot of space"
-							android:layout_marginTop="@dimen/spacing_tiny"
-							android:layout_marginBottom="@dimen/spacing_tiny"
-							android:layout_marginStart="@dimen/spacing_small"
-							android:layout_marginEnd="@dimen/spacing_small"
-							android:fontFamily="sans-serif-light"
-							android:textColor="@color/white"
-							android:textSize="@dimen/text_normal" />
-				</LinearLayout>
-			</LinearLayout>
 		<LinearLayout
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"

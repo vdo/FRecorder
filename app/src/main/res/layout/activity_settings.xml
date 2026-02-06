@@ -325,6 +325,16 @@
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content" />
 
+		<com.dimowner.audiorecorder.app.widget.SettingView
+				android:id="@+id/setting_output_format"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content" />
+
+		<com.dimowner.audiorecorder.app.widget.SettingView
+				android:id="@+id/setting_bit_depth"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content" />
+
 		<LinearLayout
 				android:id="@+id/panelAudioSource"
 				android:layout_width="match_parent"
