@@ -33,9 +33,6 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebugConfigDebug
-
       - name: Build Release APK
         run: ./gradlew assembleReleaseConfigRelease
 
@@ -46,10 +43,8 @@ jobs:
       - name: Rename APKs
         run: |
           TAG=${{ steps.tag.outputs.TAG }}
-          mv app/build/outputs/apk/debugConfig/debug/app-debugConfig-debug.apk \
-             app/build/outputs/apk/debugConfig/debug/FRecorder-${TAG}-debug.apk
           mv app/build/outputs/apk/releaseConfig/release/app-releaseConfig-release.apk \
-             app/build/outputs/apk/releaseConfig/release/FRecorder-${TAG}-release.apk
+             app/build/outputs/apk/releaseConfig/release/FRecorder-${TAG}.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -59,6 +54,5 @@ jobs:
           draft: false
           prerelease: ${{ contains(steps.tag.outputs.TAG, '-') }}
           files: |
-            app/build/outputs/apk/debugConfig/debug/FRecorder-${{ steps.tag.outputs.TAG }}-debug.apk
-            app/build/outputs/apk/releaseConfig/release/FRecorder-${{ steps.tag.outputs.TAG }}-release.apk
+            app/build/outputs/apk/releaseConfig/release/FRecorder-${{ steps.tag.outputs.TAG }}.apk
           generate_release_notes: true

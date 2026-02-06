@@ -42,6 +42,13 @@ Removed support for **3GP** and **M4A** recording formats. These were low-qualit
 
 FRecorder is based on [Audio Recorder](https://github.com/Dimowner/AudioRecorder) by Dmytro Ponomarenko.
 
+---
+
+> *"The best microphone is the one you have with you."*
+> — adapted from Chase Jarvis
+
+---
+
 ## License
 
 ```
@@ -61,7 +68,4 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
----
 
-> *"The best microphone is the one you have with you."*
-> — adapted from Chase Jarvis
