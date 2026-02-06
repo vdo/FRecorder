@@ -150,8 +150,7 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 		TextView txtAbout = findViewById(R.id.txtAbout);
 		txtAbout.setText(getAboutContent());
 		findViewById(R.id.btnTrash).setOnClickListener(this);
-		findViewById(R.id.btnRate).setOnClickListener(this);
-		findViewById(R.id.btnRequest).setOnClickListener(this);
+		findViewById(R.id.btnCredits).setOnClickListener(this);
 		panelPublicDir = findViewById(R.id.panelPublicDir);
 		txtFileBrowser = findViewById(R.id.btn_file_browser);
 		txtFileBrowser.setOnClickListener(this);
@@ -387,13 +386,11 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 			presenter.onRecordsLocationClick();
 		} else if (id == R.id.btn_file_browser) {
 			startActivity(FileBrowserActivity.getStartIntent(getApplicationContext()));
-		} else if (id == R.id.btnRate) {
-			rateApp();
 		} else if (id == R.id.btnReset) {
 			presenter.resetSettings();
 			presenter.loadSettings();
-		} else if (id == R.id.btnRequest) {
-			requestFeature();
+		} else if (id == R.id.btnCredits) {
+			showCreditsDialog();
 		}
 	}
 
@@ -403,40 +400,8 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 		ARApplication.getInjector().releaseSettingsPresenter();
 	}
 
-	public void rateApp() {
-		try {
-			Intent rateIntent = rateIntentForUrl("market://details");
-			startActivity(rateIntent);
-		} catch (ActivityNotFoundException e) {
-			Intent rateIntent = rateIntentForUrl("https://play.google.com/store/apps/details");
-			startActivity(rateIntent);
-		}
-	}
-
-	private void requestFeature() {
-		Intent i = new Intent(Intent.ACTION_SEND);
-		i.setType("message/rfc822");
-		i.putExtra(Intent.EXTRA_EMAIL, new String[]{AppConstants.REQUESTS_RECEIVER});
-		i.putExtra(Intent.EXTRA_SUBJECT,
-				"[" + getResources().getString(R.string.app_name)
-						+ "] " + AndroidUtils.getAppVersion(getApplicationContext())
-						+ " - " + getResources().getString(R.string.request)
-		);
-		try {
-			Intent chooser = Intent.createChooser(i, getResources().getString(R.string.send_email));
-			chooser.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-			startActivity(chooser);
-		} catch (android.content.ActivityNotFoundException ex) {
-			showError(R.string.email_clients_not_found);
-		}
-	}
-
-	private Intent rateIntentForUrl(String url) {
-		Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(String.format("%s?id=%s", url, getApplicationContext().getPackageName())));
-		int flags = Intent.FLAG_ACTIVITY_NO_HISTORY | Intent.FLAG_ACTIVITY_MULTIPLE_TASK;
-			flags |= Intent.FLAG_ACTIVITY_NEW_DOCUMENT;
-		intent.addFlags(flags);
-		return intent;
+	private void showCreditsDialog() {
+		AndroidUtils.showInfoDialog(this, R.string.credits_message);
 	}
 
 	public SpannableStringBuilder getAboutContent() {

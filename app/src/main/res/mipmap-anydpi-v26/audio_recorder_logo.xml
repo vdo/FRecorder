@@ -17,5 +17,5 @@
 
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/icon_background"/>
-    <foreground android:drawable="@mipmap/audio_recorder_adaptive_logo_min" />
+    <foreground android:drawable="@drawable/ic_frecorder_foreground" />
 </adaptive-icon>

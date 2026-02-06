@@ -37,7 +37,7 @@ public class AppConstants {
 
 	public static final String REQUESTS_RECEIVER = "dmitriy.ponomarenko.ua@gmail.com";
 
-	public static final String APPLICATION_NAME = "AudioRecorder";
+	public static final String APPLICATION_NAME = "FRecorder";
 	public static final String RECORDS_DIR = "records";
 	public static final String SEPARATOR = ", ";
 	public static final String EXTENSION_SEPARATOR = ".";
