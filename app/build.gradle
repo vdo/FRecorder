@@ -12,8 +12,8 @@ android {
 		applicationId "com.vdo.frecorder"
 		minSdkVersion 23
 		targetSdkVersion 35
-		versionCode 935
-		versionName "0.2.0"
+		versionCode 937
+		versionName "0.2.2"
 	}
 
 	buildFeatures {
