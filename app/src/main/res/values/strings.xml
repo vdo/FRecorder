@@ -12,6 +12,12 @@
 	<string name="monitoring_feedback_warning_title">Feedback warning</string>
 	<string name="monitoring_feedback_warning">The microphone input and speaker output are the same device. This will cause audio feedback.\n\nConnect headphones or an external audio device to use monitoring safely.</string>
 	<string name="noise_reduction_on_save">Noise reduction on save (WAV)</string>
+	<string name="noise_reduction_settings">Noise reduction settings</string>
+	<string name="noise_reduction_configure">Configure</string>
+	<string name="noise_reduction_db">Reduction (dB): %.1f</string>
+	<string name="noise_reduction_sensitivity">Sensitivity: %.1f</string>
+	<string name="noise_reduction_freq_smoothing">Freq smoothing (bands): %d</string>
+	<string name="noise_profile_seconds">Noise profile (seconds): %.1f</string>
 	<string name="noise_reduction_on">Noise reduction on</string>
 	<string name="noise_reduction_off">Noise reduction off</string>
 	<string name="noise_reduction_processing">Applying noise reduction…</string>

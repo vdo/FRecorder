@@ -15,9 +15,9 @@ Fork of [Dimowner/AudioRecorder](https://github.com/Dimowner/AudioRecorder) with
 - **USB Audio Input** — Record from external USB microphones, audio interfaces, and other USB audio devices. Automatically detects connected devices and lets you select them as the recording source. Use a USB audio interface like the Rode AI-Micro or a TRS-to-USB-C adapter like the BOYA BY-K4 to plug in contact mics, lavaliers, or any standard 3.5mm audio source.
 - **Live Monitoring** — Listen to what's being recorded in real-time through Bluetooth headphones or the built-in speaker. Toggle on/off before or during recording.
 - **Gain Boost** — Adjustable input gain (+6 dB / +12 dB) to amplify quiet sources. Applied in real-time with clipping protection.
-- **Noise Reduction** — Optional spectral noise reduction applied on save (WAV only).
+- **Noise Reduction** — Optional spectral noise reduction applied on save (WAV only). Configurable parameters.
 - **High/Low-Pass Filters** — Configurable HPF (80/120 Hz) and LPF (9.5/15 kHz) for cleaning up recordings.
-- **Noise Gate** — Monitor-only noise gate to cut background noise during live monitoring.
+- **Noise Gate** — Noise gate to cut background noise during silence.
 - **Save Formats** — WAV (16-bit or 24-bit), MP3 (320 kbps via LAME), and FLAC (lossless). Recording is always done internally in WAV for maximum quality; conversion happens on save.
 - **Bit Depth** — Selectable 16-bit or 24-bit WAV output.
 - **Configurable Audio** — Sample rate (8–48 kHz), mono/stereo, audio input device selection.
@@ -26,6 +26,8 @@ Fork of [Dimowner/AudioRecorder](https://github.com/Dimowner/AudioRecorder) with
 - **Visual Waveform** — Real-time waveform display during recording and playback.
 - **File Management** — Rename, share, import, bookmark, trash/restore recordings. Built-in file browser.
 - **Themes** — Multiple color themes to personalize the app.
+
+See **[Audio FX & Noise Reduction](AUDIO_FX.md)** for a detailed explanation of all audio effects, how they work, and recommended setups.
 
 ## Format Changes from Upstream
 

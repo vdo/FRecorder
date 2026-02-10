@@ -776,9 +776,15 @@ public class MainPresenter implements MainContract.UserActionsListener {
 			@Override
 			public void run() {
 				try {
+					if (uri.getScheme() == null || !uri.getScheme().equals("content")) {
+						throw new SecurityException("Only content:// URIs are supported for import");
+					}
 					ParcelFileDescriptor parcelFileDescriptor = context.getContentResolver().openFileDescriptor(uri, "r");
 					FileDescriptor fileDescriptor = parcelFileDescriptor.getFileDescriptor();
-					String name = extractFileName(context, uri);
+					String name = FileUtil.sanitizeFileName(extractFileName(context, uri));
+					if (name == null) {
+						throw new IOException("Invalid file name extracted from URI");
+					}
 
 					File newFile = fileRepository.provideRecordFile(name);
 					if (FileUtil.copyFile(fileDescriptor, newFile)) {

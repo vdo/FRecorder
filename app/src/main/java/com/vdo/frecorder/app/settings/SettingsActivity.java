@@ -34,10 +34,13 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.LinearLayout;
+import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import android.app.AlertDialog;
 
 import com.vdo.frecorder.ARApplication;
 import com.vdo.frecorder.AppConstants;
@@ -48,6 +51,7 @@ import com.vdo.frecorder.app.moverecords.MoveRecordsActivity;
 import com.vdo.frecorder.app.trash.TrashActivity;
 import com.vdo.frecorder.app.widget.SettingView;
 import com.vdo.frecorder.audio.AudioDeviceManager;
+import com.vdo.frecorder.data.Prefs;
 import com.vdo.frecorder.util.AndroidUtils;
 import com.vdo.frecorder.util.FileUtil;
 import com.vdo.frecorder.util.RippleUtils;
@@ -78,6 +82,7 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 	private Switch swKeepScreenOn;
 	private Switch swAskToRename;
 	private Switch swNoiseReduction;
+	private TextView btnNoiseReductionConfigure;
 
 	private Spinner nameFormatSelector;
 	private Spinner audioSourceSelector;
@@ -261,6 +266,9 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 
 		swNoiseReduction = findViewById(R.id.swNoiseReduction);
 		swNoiseReduction.setOnCheckedChangeListener((btn, isChecked) -> presenter.setNoiseReductionEnabled(isChecked));
+
+		btnNoiseReductionConfigure = findViewById(R.id.btnNoiseReductionConfigure);
+		btnNoiseReductionConfigure.setOnClickListener(v -> showNoiseReductionSettingsDialog());
 
 		audioSourceSelector = findViewById(R.id.audio_source_selector);
 		audioSourceSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -652,6 +660,96 @@ public class SettingsActivity extends Activity implements SettingsContract.View,
 		bitDepthSetting.setEnabled(false);
 		audioSourceSelector.setEnabled(false);
 		gainBoostSetting.setEnabled(false);
+	}
+
+	private void showNoiseReductionSettingsDialog() {
+		Prefs prefs = ARApplication.getInjector().providePrefs(getApplicationContext());
+
+		float currentDb = prefs.getNoiseReductionDb();
+		float currentSensitivity = prefs.getNoiseReductionSensitivity();
+		int currentFreqSmoothing = prefs.getNoiseReductionFreqSmoothing();
+		float currentProfileSeconds = prefs.getNoiseProfileSeconds();
+
+		LinearLayout layout = new LinearLayout(this);
+		layout.setOrientation(LinearLayout.VERTICAL);
+		int pad = (int) getResources().getDimension(R.dimen.spacing_normal);
+		layout.setPadding(pad, pad, pad, 0);
+
+		// Reduction dB slider (0-24, step 0.5)
+		TextView txtDb = new TextView(this);
+		txtDb.setText(getString(R.string.noise_reduction_db, currentDb));
+		layout.addView(txtDb);
+		SeekBar seekDb = new SeekBar(this);
+		seekDb.setMax(48); // 0-24 in 0.5 steps
+		seekDb.setProgress((int) (currentDb * 2));
+		seekDb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+			@Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
+				txtDb.setText(getString(R.string.noise_reduction_db, progress / 2.0f));
+			}
+			@Override public void onStartTrackingTouch(SeekBar sb) {}
+			@Override public void onStopTrackingTouch(SeekBar sb) {}
+		});
+		layout.addView(seekDb);
+
+		// Sensitivity slider (0-24, step 0.5)
+		TextView txtSensitivity = new TextView(this);
+		txtSensitivity.setText(getString(R.string.noise_reduction_sensitivity, currentSensitivity));
+		layout.addView(txtSensitivity);
+		SeekBar seekSensitivity = new SeekBar(this);
+		seekSensitivity.setMax(48); // 0-24 in 0.5 steps
+		seekSensitivity.setProgress((int) (currentSensitivity * 2));
+		seekSensitivity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+			@Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
+				txtSensitivity.setText(getString(R.string.noise_reduction_sensitivity, progress / 2.0f));
+			}
+			@Override public void onStartTrackingTouch(SeekBar sb) {}
+			@Override public void onStopTrackingTouch(SeekBar sb) {}
+		});
+		layout.addView(seekSensitivity);
+
+		// Frequency smoothing slider (0-6, step 1)
+		TextView txtFreqSmoothing = new TextView(this);
+		txtFreqSmoothing.setText(getString(R.string.noise_reduction_freq_smoothing, currentFreqSmoothing));
+		layout.addView(txtFreqSmoothing);
+		SeekBar seekFreqSmoothing = new SeekBar(this);
+		seekFreqSmoothing.setMax(6);
+		seekFreqSmoothing.setProgress(currentFreqSmoothing);
+		seekFreqSmoothing.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+			@Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
+				txtFreqSmoothing.setText(getString(R.string.noise_reduction_freq_smoothing, progress));
+			}
+			@Override public void onStartTrackingTouch(SeekBar sb) {}
+			@Override public void onStopTrackingTouch(SeekBar sb) {}
+		});
+		layout.addView(seekFreqSmoothing);
+
+		// Noise profile seconds slider (0.5-5.0, step 0.5)
+		TextView txtProfile = new TextView(this);
+		txtProfile.setText(getString(R.string.noise_profile_seconds, currentProfileSeconds));
+		layout.addView(txtProfile);
+		SeekBar seekProfile = new SeekBar(this);
+		seekProfile.setMax(9); // 0.5-5.0 in 0.5 steps → 0..9 maps to 0.5..5.0
+		seekProfile.setProgress((int) ((currentProfileSeconds - 0.5f) * 2));
+		seekProfile.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+			@Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
+				txtProfile.setText(getString(R.string.noise_profile_seconds, (progress + 1) / 2.0f));
+			}
+			@Override public void onStartTrackingTouch(SeekBar sb) {}
+			@Override public void onStopTrackingTouch(SeekBar sb) {}
+		});
+		layout.addView(seekProfile);
+
+		new AlertDialog.Builder(this)
+				.setTitle(R.string.noise_reduction_settings)
+				.setView(layout)
+				.setPositiveButton(R.string.btn_save, (dialog, which) -> {
+					prefs.setNoiseReductionDb(seekDb.getProgress() / 2.0f);
+					prefs.setNoiseReductionSensitivity(seekSensitivity.getProgress() / 2.0f);
+					prefs.setNoiseReductionFreqSmoothing(seekFreqSmoothing.getProgress());
+					prefs.setNoiseProfileSeconds((seekProfile.getProgress() + 1) / 2.0f);
+				})
+				.setNegativeButton(R.string.btn_cancel, null)
+				.show();
 	}
 
 	@Override
