@@ -59,6 +59,10 @@ public class PrefsImpl implements Prefs {
 	private static final String PREF_KEY_SETTING_AUDIO_SOURCE = "setting_audio_source";
 	private static final String PREF_KEY_GAIN_BOOST_LEVEL = "gain_boost_level";
 	private static final String PREF_KEY_NOISE_REDUCTION_ENABLED = "noise_reduction_enabled";
+	private static final String PREF_KEY_NOISE_REDUCTION_DB = "noise_reduction_db";
+	private static final String PREF_KEY_NOISE_REDUCTION_SENSITIVITY = "noise_reduction_sensitivity";
+	private static final String PREF_KEY_NOISE_REDUCTION_FREQ_SMOOTHING = "noise_reduction_freq_smoothing";
+	private static final String PREF_KEY_NOISE_PROFILE_SECONDS = "noise_profile_seconds";
 	private static final String PREF_KEY_HPF_MODE = "hpf_mode";
 	private static final String PREF_KEY_LPF_MODE = "lpf_mode";
 	private static final String PREF_KEY_NOISE_GATE_ENABLED = "noise_gate_enabled";
@@ -461,6 +465,54 @@ public class PrefsImpl implements Prefs {
 	}
 
 	@Override
+	public void setNoiseReductionDb(float db) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putFloat(PREF_KEY_NOISE_REDUCTION_DB, db);
+		editor.apply();
+	}
+
+	@Override
+	public float getNoiseReductionDb() {
+		return sharedPreferences.getFloat(PREF_KEY_NOISE_REDUCTION_DB, AppConstants.DEFAULT_NOISE_REDUCTION_DB);
+	}
+
+	@Override
+	public void setNoiseReductionSensitivity(float sensitivity) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putFloat(PREF_KEY_NOISE_REDUCTION_SENSITIVITY, sensitivity);
+		editor.apply();
+	}
+
+	@Override
+	public float getNoiseReductionSensitivity() {
+		return sharedPreferences.getFloat(PREF_KEY_NOISE_REDUCTION_SENSITIVITY, AppConstants.DEFAULT_NOISE_REDUCTION_SENSITIVITY);
+	}
+
+	@Override
+	public void setNoiseReductionFreqSmoothing(int bands) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putInt(PREF_KEY_NOISE_REDUCTION_FREQ_SMOOTHING, bands);
+		editor.apply();
+	}
+
+	@Override
+	public int getNoiseReductionFreqSmoothing() {
+		return sharedPreferences.getInt(PREF_KEY_NOISE_REDUCTION_FREQ_SMOOTHING, AppConstants.DEFAULT_NOISE_REDUCTION_FREQ_SMOOTHING);
+	}
+
+	@Override
+	public void setNoiseProfileSeconds(float seconds) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putFloat(PREF_KEY_NOISE_PROFILE_SECONDS, seconds);
+		editor.apply();
+	}
+
+	@Override
+	public float getNoiseProfileSeconds() {
+		return sharedPreferences.getFloat(PREF_KEY_NOISE_PROFILE_SECONDS, AppConstants.DEFAULT_NOISE_PROFILE_SECONDS);
+	}
+
+	@Override
 	public void setHpfMode(int mode) {
 		SharedPreferences.Editor editor = sharedPreferences.edit();
 		editor.putInt(PREF_KEY_HPF_MODE, mode);
@@ -508,6 +560,10 @@ public class PrefsImpl implements Prefs {
 		editor.putInt(PREF_KEY_SETTING_AUDIO_SOURCE, AppConstants.DEFAULT_AUDIO_SOURCE);
 		editor.putInt(PREF_KEY_GAIN_BOOST_LEVEL, AppConstants.DEFAULT_GAIN_BOOST_LEVEL);
 		editor.putBoolean(PREF_KEY_NOISE_REDUCTION_ENABLED, AppConstants.DEFAULT_NOISE_REDUCTION_ENABLED);
+		editor.putFloat(PREF_KEY_NOISE_REDUCTION_DB, AppConstants.DEFAULT_NOISE_REDUCTION_DB);
+		editor.putFloat(PREF_KEY_NOISE_REDUCTION_SENSITIVITY, AppConstants.DEFAULT_NOISE_REDUCTION_SENSITIVITY);
+		editor.putInt(PREF_KEY_NOISE_REDUCTION_FREQ_SMOOTHING, AppConstants.DEFAULT_NOISE_REDUCTION_FREQ_SMOOTHING);
+		editor.putFloat(PREF_KEY_NOISE_PROFILE_SECONDS, AppConstants.DEFAULT_NOISE_PROFILE_SECONDS);
 		editor.putInt(PREF_KEY_HPF_MODE, AppConstants.DEFAULT_HPF_MODE);
 		editor.putInt(PREF_KEY_LPF_MODE, AppConstants.DEFAULT_LPF_MODE);
 		editor.putBoolean(PREF_KEY_NOISE_GATE_ENABLED, AppConstants.DEFAULT_NOISE_GATE_ENABLED);

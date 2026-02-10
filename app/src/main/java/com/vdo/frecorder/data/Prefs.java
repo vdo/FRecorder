@@ -87,6 +87,18 @@ public interface Prefs {
 	void setNoiseReductionEnabled(boolean enabled);
 	boolean isNoiseReductionEnabled();
 
+	void setNoiseReductionDb(float db);
+	float getNoiseReductionDb();
+
+	void setNoiseReductionSensitivity(float sensitivity);
+	float getNoiseReductionSensitivity();
+
+	void setNoiseReductionFreqSmoothing(int bands);
+	int getNoiseReductionFreqSmoothing();
+
+	void setNoiseProfileSeconds(float seconds);
+	float getNoiseProfileSeconds();
+
 	void setHpfMode(int mode);
 	int getHpfMode();
 

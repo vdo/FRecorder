@@ -453,6 +453,10 @@ public class RecordingService extends Service {
 					// Set noise reduction and filter preferences on WavRecorder
 					if (recorder instanceof WavRecorder) {
 						((WavRecorder) recorder).setNoiseReductionEnabled(prefs.isNoiseReductionEnabled());
+						((WavRecorder) recorder).setNoiseReductionDb(prefs.getNoiseReductionDb());
+						((WavRecorder) recorder).setNoiseReductionSensitivity(prefs.getNoiseReductionSensitivity());
+						((WavRecorder) recorder).setNoiseReductionFreqSmoothing(prefs.getNoiseReductionFreqSmoothing());
+						((WavRecorder) recorder).setNoiseProfileSeconds(prefs.getNoiseProfileSeconds());
 						((WavRecorder) recorder).setHpfMode(prefs.getHpfMode());
 						((WavRecorder) recorder).setLpfMode(prefs.getLpfMode());
 						((WavRecorder) recorder).setNoiseGateEnabled(prefs.isNoiseGateEnabled());

@@ -67,6 +67,10 @@ public class WavRecorder implements RecorderContract.Recorder {
 	private int gainBoostLevel = AppConstants.GAIN_BOOST_OFF;
 	private volatile boolean monitoringEnabled = false;
 	private volatile boolean noiseReductionEnabled = false;
+	private volatile float noiseReductionDb = AppConstants.DEFAULT_NOISE_REDUCTION_DB;
+	private volatile float noiseReductionSensitivity = AppConstants.DEFAULT_NOISE_REDUCTION_SENSITIVITY;
+	private volatile int noiseReductionFreqSmoothing = AppConstants.DEFAULT_NOISE_REDUCTION_FREQ_SMOOTHING;
+	private volatile float noiseProfileSeconds = AppConstants.DEFAULT_NOISE_PROFILE_SECONDS;
 	private volatile int hpfMode = AppConstants.HPF_OFF;
 	private volatile int lpfMode = AppConstants.LPF_OFF;
 
@@ -292,10 +296,10 @@ public class WavRecorder implements RecorderContract.Recorder {
 				new Thread(() -> {
 					boolean success = NoiseReducer.process(
 							fileToProcess,
-							AppConstants.DEFAULT_NOISE_PROFILE_SECONDS,
-							AppConstants.DEFAULT_NOISE_REDUCTION_DB,
-							AppConstants.DEFAULT_NOISE_REDUCTION_SENSITIVITY,
-							AppConstants.DEFAULT_NOISE_REDUCTION_FREQ_SMOOTHING,
+							noiseProfileSeconds,
+							noiseReductionDb,
+							noiseReductionSensitivity,
+							noiseReductionFreqSmoothing,
 							progress -> {
 								if (noiseReductionListener != null) {
 									AndroidUtils.runOnUIThread(() -> noiseReductionListener.onNoiseReductionProgress(progress));
@@ -610,6 +614,22 @@ public class WavRecorder implements RecorderContract.Recorder {
 
 	public boolean isNoiseReductionEnabled() {
 		return noiseReductionEnabled;
+	}
+
+	public void setNoiseReductionDb(float db) {
+		this.noiseReductionDb = db;
+	}
+
+	public void setNoiseReductionSensitivity(float sensitivity) {
+		this.noiseReductionSensitivity = sensitivity;
+	}
+
+	public void setNoiseReductionFreqSmoothing(int bands) {
+		this.noiseReductionFreqSmoothing = bands;
+	}
+
+	public void setNoiseProfileSeconds(float seconds) {
+		this.noiseProfileSeconds = seconds;
 	}
 
 	public void setHpfMode(int mode) {

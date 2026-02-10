@@ -384,6 +384,20 @@
 					android:layout_weight="1"
 					android:text="@string/noise_reduction_on_save" />
 
+			<TextView
+					android:id="@+id/btnNoiseReductionConfigure"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:text="@string/noise_reduction_configure"
+					android:textStyle="bold"
+					android:textSize="@dimen/text_normal"
+					android:background="?android:selectableItemBackground"
+					android:paddingStart="@dimen/spacing_small"
+					android:paddingEnd="@dimen/spacing_small"
+					android:paddingTop="@dimen/spacing_xsmall"
+					android:paddingBottom="@dimen/spacing_xsmall"
+					android:layout_marginEnd="@dimen/spacing_small" />
+
 			<Switch
 					android:id="@+id/swNoiseReduction"
 					android:layout_width="wrap_content"
